@@ -1,0 +1,71 @@
+# --- Git Ignore File for ViralCutter Project ---
+
+# 1. Pastas de Mídia Geradas e Temporárias
+# Estas pastas contêm arquivos grandes ou temporários que não devem ser versionados.
+/uploads/
+/outputs/
+/tmp/
+/subs/
+/subs_ass/
+/burned_sub/
+/final/
+/node_modules/
+
+# 2. Arquivos de Ambiente
+# NUNCA cometa arquivos .env! Eles contêm chaves de API, senhas e outros segredos.
+# É uma boa prática ter um .env.example com a estrutura, mas sem os valores.
+*.env
+.env*
+!.env.example
+
+# 3. Ambientes Virtuais do Python
+# A pasta do ambiente virtual é específica da máquina e pode ser muito grande.
+# As dependências devem ser gerenciadas pelo requirements.txt.
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 4. Bytecode e Cache do Python
+# O Python gera esses arquivos automaticamente para acelerar a execução.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyz
+*.pyw
+
+# 5. Configuração de IDE / Editor de Código
+# As configurações do editor são pessoais e não devem ser compartilhadas no repositório.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 6. Arquivos de Teste e Cobertura
+# Relatórios e caches gerados durante os testes.
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# 7. Artefatos de Build e Distribuição
+# Gerados ao empacotar a aplicação Python.
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 8. Arquivos de Log
+# Logs gerados durante a execução da aplicação.
+*.log
+logs/
+
+# 9. Arquivos específicos do Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini

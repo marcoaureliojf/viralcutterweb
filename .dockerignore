@@ -1,0 +1,59 @@
+# --- Docker Ignore File for ViralCutter Project ---
+# Este arquivo impede que arquivos e pastas desnecessários sejam enviados
+# para o Docker daemon, acelerando o build e mantendo a imagem final pequena.
+
+# 1. Arquivos do Docker e Git
+# A imagem final não precisa da sua configuração do Docker Compose ou do histórico do Git.
+Dockerfile
+docker-compose.yml
+.git/
+.gitignore
+.dockerignore
+README.md
+
+# 2. Pastas de Mídia Geradas e Temporárias
+# Essencial para a velocidade do build. Nunca envie uploads ou outputs para o contexto.
+uploads/
+outputs/
+tmp/
+subs/
+subs_ass/
+burned_sub/
+final/
+node_modules/
+
+# 3. Ambientes Virtuais do Python
+# CRÍTICO: A imagem Docker deve construir seu próprio ambiente a partir do requirements.txt.
+# Enviar seu venv local vai quebrar o build e torná-lo extremamente lento.
+venv/
+.venv/
+env/
+ENV/
+
+# 4. Arquivos de Ambiente e Segredos
+# NUNCA inclua arquivos .env na sua imagem Docker por segurança.
+*.env
+.env*
+
+# 5. Bytecode e Cache do Python
+# A imagem gerará seu próprio bytecode quando o código for executado.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 6. Configuração de IDE / Editor de Código
+# Configurações locais não são necessárias na imagem.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 7. Arquivos de Log
+*.log
+logs/
+
+# 8. Arquivos específicos do Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini

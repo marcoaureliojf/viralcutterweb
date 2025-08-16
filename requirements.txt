@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+jinja2
+g4f
+yt-dlp
+ffmpeg-python
+git+https://github.com/matheusbach/whisperx.git
+mediapipe

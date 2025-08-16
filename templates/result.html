@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processando Vídeo...</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .spinner {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+    <div class="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
+        <div class="spinner w-16 h-16 border-4 border-gray-600 rounded-full mx-auto mb-4"></div>
+        <h1 class="text-3xl font-bold mb-2">Processando seu vídeo...</h1>
+        <p class="text-gray-400">Isso pode levar alguns minutos. Por favor, não feche esta aba.</p>
+        <p class="text-gray-500 text-sm mt-4">A página será atualizada automaticamente quando o processo for concluído.</p>
+    </div>
+
+    <!-- SCRIPT DE ATUALIZAÇÃO AUTOMÁTICA -->
+    <script>
+        const jobId = "{{ job_id }}";
+
+        async function checkJobStatus() {
+            try {
+                const response = await fetch(`/status/${jobId}`);
+                if (!response.ok) {
+                    console.error("Erro ao buscar status do job. Parando as verificações.");
+                    clearInterval(intervalId);
+                    return;
+                }
+                const data = await response.json();
+                const status = data.status;
+
+                // --- LÓGICA DE REDIRECIONAMENTO ATUALIZADA ---
+                if (status === "complete") {
+                    // Se o trabalho estiver completo, vá para a página de resultados
+                    window.location.href = '/outputs';
+                } else if (status !== "processing" && status !== "finalizing") {
+                    // Se estiver em qualquer outro estado finalizado (como pending_adjustment), recarregue a página atual
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error("Falha na requisição de status:", error);
+                clearInterval(intervalId);
+            }
+        }
+
+        const intervalId = setInterval(checkJobStatus, 5000);
+    </script>
+</body>
+</html>

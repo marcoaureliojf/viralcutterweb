@@ -1,0 +1,22 @@
+services:
+  viralcutter-app:
+    build: .  # Build the Docker image from the Dockerfile in the current directory
+    container_name: viralcutter_container
+    ports:
+      - "9999:8000"  # Map port 8000 on the host to port 8000 in the container
+    volumes:
+      # Mount the current directory on the host to /app in the container
+      # This allows for live code changes without rebuilding the image.
+      - .:/app
+      # Use named volumes for persistent storage of uploads, outputs, and models
+      # This data will persist even if the container is removed.
+      #- uploads:/app/uploads
+      #- outputs:/app/outputs
+      #- models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  # Allocate 1 GPU to this container
+              capabilities: [gpu]

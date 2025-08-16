@@ -1,0 +1,16 @@
+{
+  "name": "viralcutter-web",
+  "version": "1.0.0",
+  "description": "A modern web UI for ViralCutter",
+  "main": "index.js",
+  "scripts": {
+    "build-css": "npx tailwindcss -i ./static/css/style.css -o ./static/css/output.css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "tailwindcss": "^3.4.1"
+  }
+}

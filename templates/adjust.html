@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adjust Framing - ViralCutter</title>
+    <link href="/static/css/output.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .roi-box { position: absolute; border: 2px dashed white; cursor: move; }
+        .handle { position: absolute; width: 10px; height: 10px; background: white; border: 1px solid black; }
+        .handle-se { bottom: -5px; right: -5px; cursor: se-resize; }
+        .handle-sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+        .handle-nw { top: -5px; left: -5px; cursor: nw-resize; }
+        .handle-ne { top: -5px; right: -5px; cursor: ne-resize; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 font-sans p-4">
+    <div class="w-full max-w-3xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-100">Visual Framing Tool</h1>
+            <p class="text-slate-400 mt-2">Arraste e redimensione as caixas para selecionar as áreas de interesse em cada clipe.</p>
+        </div>
+
+        <form action="/finalize/{{ job_id }}" method="post">
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                {% for clip in clips %}
+                <div class="space-y-4 bg-slate-800 p-4 rounded-lg border border-slate-700"
+                     x-data="cropper('{{ clip.path }}')" x-init="init($refs.container)">
+                    <h3 class="font-semibold text-slate-200 truncate">{{ clip.name }}</h3>
+
+                    <div class="relative w-full aspect-video bg-black rounded-md overflow-hidden" 
+                         @mousemove.prevent="handleMouseMove" @mouseup.prevent="stopAction" @mouseleave.prevent="stopAction"
+                         x-ref="container">
+                        <video muted loop playsinline autoplay class="w-full h-full">
+                            <source src="{{ clip.url }}" type="video/mp4">
+                        </video>
+                        
+                        <!-- ROI 1: Top (Presenter) -->
+                        <div class="roi-box bg-blue-500/30" :style="`left: ${roi1.x}%; top: ${roi1.y}%; width: ${roi1.w}%; height: ${roi1.h}%`"
+                             @mousedown.prevent="startDrag('roi1', $event)">
+                            <div class="handle handle-nw" @mousedown.prevent.stop="startResize('roi1', 'nw', $event)"></div>
+                            <div class="handle handle-ne" @mousedown.prevent.stop="startResize('roi1', 'ne', $event)"></div>
+                            <div class="handle handle-sw" @mousedown.prevent.stop="startResize('roi1', 'sw', $event)"></div>
+                            <div class="handle handle-se" @mousedown.prevent.stop="startResize('roi1', 'se', $event)"></div>
+                        </div>
+
+                        <!-- ROI 2: Bottom (Guest/Presentation) -->
+                        <div class="roi-box bg-green-500/30" :style="`left: ${roi2.x}%; top: ${roi2.y}%; width: ${roi2.w}%; height: ${roi2.h}%`"
+                             @mousedown.prevent="startDrag('roi2', $event)">
+                            <div class="handle handle-nw" @mousedown.prevent.stop="startResize('roi2', 'nw', $event)"></div>
+                            <div class="handle handle-ne" @mousedown.prevent.stop="startResize('roi2', 'ne', $event)"></div>
+                            <div class="handle handle-sw" @mousedown.prevent.stop="startResize('roi2', 'sw', $event)"></div>
+                            <div class="handle handle-se" @mousedown.prevent.stop="startResize('roi2', 'se', $event)"></div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden inputs -->
+                    <input type="hidden" name="clip_path_{{ loop.index0 }}" value="{{ clip.path }}">
+                    <input type="hidden" :name="'roi1_x_{{ loop.index0 }}'" :value="roi1.x">
+                    <input type="hidden" :name="'roi1_y_{{ loop.index0 }}'" :value="roi1.y">
+                    <input type="hidden" :name="'roi1_w_{{ loop.index0 }}'" :value="roi1.w">
+                    <input type="hidden" :name="'roi1_h_{{ loop.index0 }}'" :value="roi1.h">
+                    <input type="hidden" :name="'roi2_x_{{ loop.index0 }}'" :value="roi2.x">
+                    <input type="hidden" :name="'roi2_y_{{ loop.index0 }}'" :value="roi2.y">
+                    <input type="hidden" :name="'roi2_w_{{ loop.index0 }}'" :value="roi2.w">
+                    <input type="hidden" :name="'roi2_h_{{ loop.index0 }}'" :value="roi2.h">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-12 text-center">
+                <button type="submit" class="w-full max-w-xs inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700">Finalize Videos</button>
+            </div>
+        </form>
+    </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('cropper', (clipPath) => ({
+        roi1: { x: 10, y: 20, w: 30, h: 40 },
+        roi2: { x: 60, y: 40, w: 30, h: 40 },
+        containerRect: null,
+        action: { type: null, roi: null, handle: null, startX: 0, startY: 0, startRoi: null },
+        
+        init(container) { this.containerRect = container.getBoundingClientRect(); },
+        
+        startDrag(roi, event) {
+            this.action = { type: 'drag', roi, startX: event.clientX, startY: event.clientY, startRoi: { ...this[roi] } };
+        },
+        
+        startResize(roi, handle, event) {
+            this.action = { type: 'resize', roi, handle, startX: event.clientX, startY: event.clientY, startRoi: { ...this[roi] } };
+        },
+
+        stopAction() { this.action.type = null; },
+
+        handleMouseMove(event) {
+            if (!this.action.type) return;
+            const dx = (event.clientX - this.action.startX) / this.containerRect.width * 100;
+            const dy = (event.clientY - this.action.startY) / this.containerRect.height * 100;
+            
+            if (this.action.type === 'drag') {
+                this[this.action.roi].x = Math.max(0, Math.min(100 - this.action.startRoi.w, this.action.startRoi.x + dx));
+                this[this.action.roi].y = Math.max(0, Math.min(100 - this.action.startRoi.h, this.action.startRoi.y + dy));
+            } else if (this.action.type === 'resize') {
+                const r = this.action.startRoi;
+                if (this.action.handle.includes('e')) this[this.action.roi].w = Math.max(5, Math.min(100 - r.x, r.w + dx));
+                if (this.action.handle.includes('w')) {
+                    const newW = r.w - dx;
+                    if (newW > 5) { this[this.action.roi].w = newW; this[this.action.roi].x = r.x + dx; }
+                }
+                if (this.action.handle.includes('s')) this[this.action.roi].h = Math.max(5, Math.min(100 - r.y, r.h + dy));
+                if (this.action.handle.includes('n')) {
+                    const newH = r.h - dy;
+                    if (newH > 5) { this[this.action.roi].h = newH; this[this.action.roi].y = r.y + dy; }
+                }
+            }
+        }
+    }));
+});
+</script>
+</body>
+</html>
