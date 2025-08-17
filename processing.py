@@ -72,7 +72,7 @@ def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_ba
         clip_paths = list(clips_data.keys())
 
         for clip_path in clip_paths:
-             generate_whisperx(clip_path, output_dir='subs', model='base', compute_type='float16', batch_size=2)
+             generate_whisperx(clip_path, output_dir='subs', model='medium', compute_type='float16', batch_size=2)
         
         adjust_subtitles.adjust(clip_paths)
 
