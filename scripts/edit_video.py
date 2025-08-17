@@ -1,14 +1,13 @@
 import cv2
 import subprocess
 import os
-import shutil
 
 def edit(clips_data: dict):
     """
-    Processa os vídeos criando um efeito de TELA DIVIDIDA e QUEIMANDO AS LEGENDAS
-    em um único e eficiente comando FFmpeg.
+    Processa os vídeos criando um efeito de TELA DIVIDIDA, QUEIMANDO AS LEGENDAS
+    e ADICIONANDO UM TÍTULO em um único e eficiente comando FFmpeg.
     """
-    print("Iniciando processo de TELA DIVIDIDA e QUEIMA DE LEGENDAS...")
+    print("Iniciando processo de TELA DIVIDIDA, LEGENDAS e TÍTULOS...")
     output_dir = 'burned_sub'
     subtitle_dir = 'subs_ass'
     os.makedirs(output_dir, exist_ok=True)
@@ -20,12 +19,22 @@ def edit(clips_data: dict):
 
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         subtitle_path = os.path.join(subtitle_dir, f"{base_name}.ass")
+        title_text = data.get('title', '')
 
-        if not os.path.exists(subtitle_path):
-            print(f"AVISO: Arquivo de legenda não encontrado para {video_path}. O vídeo será gerado sem legendas.")
-            subtitle_path = None
+        # --- PREPARAÇÃO DO FILTRO DE TÍTULO (drawtext) ---
+        # Escapa caracteres especiais que podem quebrar o comando FFmpeg
+        escaped_title = title_text.replace("'", "\\'").replace(":", "\\:").replace(",", "\\,")
+        
+        # Define a fonte (deve existir no container Docker)
+        font_path = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
 
-        print(f"Processando clipe: {video_path}")
+        # Configurações do filtro drawtext: texto centralizado no topo com fundo semitransparente
+        title_filter = (
+            f"drawtext=fontfile='{font_path}':text='{escaped_title}':"
+            "fontcolor=white:fontsize=60:box=1:boxcolor=black@0.5:boxborderw=10:"
+            "x=(w-text_w)/2:y=50"
+        )
+
         cap = cv2.VideoCapture(video_path)
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -47,13 +56,17 @@ def edit(clips_data: dict):
             f"[top][bottom]vstack=inputs=2[vstack_out]"
         )
 
-        if subtitle_path:
-            # --- MUDANÇA CRÍTICA AQUI ---
-            # Passa o caminho absoluto do Linux de forma limpa, sem escapes desnecessários.
+        # --- ENCADEAMENTO DE FILTROS ATUALIZADO ---
+        # A saída de um filtro se torna a entrada do próximo
+        last_video_stream = "[vstack_out]"
+        
+        if os.path.exists(subtitle_path):
             subtitle_abs_path = os.path.abspath(subtitle_path)
-            filter_complex_string += f";[vstack_out]subtitles='{subtitle_abs_path}'[out]"
-        else:
-            filter_complex_string += ";[vstack_out]copy[out]"
+            filter_complex_string += f";{last_video_stream}subtitles=filename='{subtitle_abs_path}'[subtitled_out]"
+            last_video_stream = "[subtitled_out]"
+
+        # Adiciona o filtro de título na cadeia
+        filter_complex_string += f";{last_video_stream}{title_filter}[out]"
         
         final_output_path = os.path.join(output_dir, f"{base_name}_final.mp4")
 
@@ -69,20 +82,14 @@ def edit(clips_data: dict):
             '-y', final_output_path
         ]
         
-        print(f"Executando comando FFmpeg para {final_output_path}...")
-        # Imprime o comando exato que será executado para facilitar a depuração manual
-        print(" ".join(command)) 
-        
+        print(f"Aplicando filtro combinado para {final_output_path}...")
+        print(" ".join(command))
         try:
-            # Modificação: capture stdout e stderr para diagnóstico
             result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-            print("Processo combinado (tela dividida e legendas) concluído com sucesso.")
-            # A saída do FFmpeg pode conter avisos úteis, mesmo em caso de sucesso
+            print("Processo combinado (tela dividida, legendas e título) concluído com sucesso.")
             if result.stderr:
                 print(f"Avisos do FFmpeg (stderr):\n{result.stderr}")
-
         except subprocess.CalledProcessError as e:
-            # Erro fatal: Imprime o stdout e stderr para entender a causa
             print(f"ERRO FATAL ao aplicar filtro combinado: {e}")
             print(f"--- STDOUT ---\n{e.stdout}")
             print(f"--- STDERR (Causa Provável do Erro) ---\n{e.stderr}")

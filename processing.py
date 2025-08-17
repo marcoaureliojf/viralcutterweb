@@ -12,8 +12,6 @@ def generate_whisperx(input_file: str, output_dir: str, model: str, compute_type
     print("\n" + "="*50); print("INICIANDO PROCESSO DE TRANSCRIÇÃO"); print("="*50)
     if not os.path.exists(input_file): raise FileNotFoundError(f"Arquivo de entrada não encontrado: {input_file}")
     
-    # --- LÓGICA DE DIRETÓRIO CORRIGIDA ---
-    # A pasta de saída agora é um parâmetro explícito, removendo a adivinhação.
     os.makedirs(output_dir, exist_ok=True)
     
     command = f"""whisperx "{input_file}" --model {model} --task transcribe --align_model WAV2VEC2_ASR_LARGE_LV60K_960H --chunk_size 10 --vad_onset 0.4 --vad_offset 0.3 --compute_type {compute_type} --batch_size {batch_size} --output_dir "{output_dir}" --output_format tsv --verbose True"""
@@ -23,12 +21,14 @@ def generate_whisperx(input_file: str, output_dir: str, model: str, compute_type
         base_name = os.path.splitext(os.path.basename(input_file))[0]
         expected_tsv = os.path.join(output_dir, f"{base_name}.tsv")
         
-        # A transcrição principal ainda precisa de um nome fixo para o próximo passo.
         if output_dir == 'tmp':
             renamed_tsv = os.path.join('tmp', 'input_video.tsv')
-            os.rename(expected_tsv, renamed_tsv)
-            print(f"Arquivo de saída principal renomeado para: {renamed_tsv}")
-            return renamed_tsv
+            # Renomeia apenas se o arquivo esperado existir
+            if os.path.exists(expected_tsv):
+                os.rename(expected_tsv, renamed_tsv)
+                print(f"Arquivo de saída principal renomeado para: {renamed_tsv}")
+                return renamed_tsv
+            return expected_tsv
             
         print(f"Arquivo de transcrição de clipe criado: {expected_tsv}")
         return expected_tsv
@@ -40,13 +40,22 @@ def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: 
     """
     print(f"Iniciando processamento inicial para o Job ID: {job_id}")
     try:
-        # --- LÓGICA DE DIRETÓRIO CORRIGIDA ---
-        # Especifica que a transcrição principal deve ir para a pasta 'tmp'
         generate_whisperx(input_video_path, output_dir='tmp', model=model, compute_type=compute_type, batch_size=batch_size)
         
         viral_segments = create_viral_segments.create(num_segments=3, viral_mode=True, themes='', tempo_minimo=15, tempo_maximo=90)
         cut_files = cut_segments.cut(viral_segments, input_video_path)
-        jobs_dict[job_id]["clips"] = cut_files
+
+        # --- MUDANÇA CRÍTICA AQUI ---
+        # Agora salvamos uma lista de dicionários, cada um contendo o caminho e o título do clipe.
+        # Isso garante que o título gerado pela IA seja associado ao arquivo de vídeo correto.
+        clips_with_titles = []
+        for segment_data, file_path in zip(viral_segments['segments'], cut_files):
+            clips_with_titles.append({
+                "path": file_path,
+                "title": segment_data.get("title", "Título Padrão") # Usa .get para segurança
+            })
+        
+        jobs_dict[job_id]["clips"] = clips_with_titles
         jobs_dict[job_id]["status"] = "pending_adjustment"
         print(f"Processamento inicial para o Job {job_id} concluído. Aguardando ajuste do usuário.")
     except Exception as e:
@@ -55,23 +64,21 @@ def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: 
 
 def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_base_name: str):
     """
-    Etapa 2: Pega os dados de ajuste, cria legendas, e então reenquadra E queima as legendas de uma só vez.
+    Etapa 2: Pega os dados de ajuste, cria legendas, e então reenquadra E queima as legendas/títulos de uma só vez.
     """
     print(f"Iniciando processamento final para o Job ID: {job_id}")
     try:
-        # 1. Transcreve cada corte primeiro
-        for clip_path in clips_data.keys():
-             # --- LÓGICA DE DIRETÓRIO CORRIGIDA ---
-             # Especifica que as transcrições dos clipes devem ir para a pasta 'subs'
-             generate_whisperx(clip_path, output_dir='subs', model='medium', compute_type='float16', batch_size=2)
-        
-        # 2. Cria os arquivos de legenda .ass estilizados
-        adjust_subtitles.adjust(clips_data.keys())
+        # A lista de caminhos para os próximos passos é extraída do clips_data
+        clip_paths = list(clips_data.keys())
 
-        # 3. Executa a edição E a queima de legendas em um único passo
+        for clip_path in clip_paths:
+             generate_whisperx(clip_path, output_dir='subs', model='base', compute_type='float16', batch_size=2)
+        
+        adjust_subtitles.adjust(clip_paths)
+
+        # A função edit_video agora recebe os dados completos, incluindo os títulos
         edit_video.edit(clips_data)
 
-        # 4. Move os arquivos finais para a pasta de saída
         source_folder = 'burned_sub'
         destination_folder = 'outputs'
         final_files = glob(os.path.join(source_folder, '*.mp4'))
@@ -88,9 +95,8 @@ def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_ba
     except Exception as e:
         jobs_dict[job_id]["status"] = "error"
         print(f"\n❌ ERRO no processamento final do Job {job_id}: {str(e)}")
-    #finally:
-    #    # Limpa as pastas temporárias
-    #    for dir_name in ['tmp', 'final', 'subs', 'subs_ass', 'burned_sub', 'uploads']:
-    #        if os.path.exists(dir_name) and os.path.isdir(dir_name):
-    #            shutil.rmtree(dir_name)
-    #        os.makedirs(dir_name, exist_ok=True)
+    finally:
+        # Limpa as pastas temporárias
+        for dir_name in ['tmp', 'final', 'subs', 'subs_ass', 'burned_sub']:
+            if os.path.exists(dir_name) and os.path.isdir(dir_name):
+                shutil.rmtree(dir_name)

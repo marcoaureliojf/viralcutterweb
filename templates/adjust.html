@@ -16,18 +16,20 @@
     </style>
 </head>
 <body class="bg-slate-900 text-slate-300 font-sans p-4">
-    <div class="w-full max-w-3xl mx-auto">
+    <div class="w-full max-w-3xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl shadow-lg p-8"> <!-- Aumentei um pouco o max-width para acomodar 3 colunas melhor -->
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-slate-100">Visual Framing Tool</h1>
             <p class="text-slate-400 mt-2">Arraste e redimensione as caixas para selecionar as áreas de interesse em cada clipe.</p>
         </div>
 
         <form action="/finalize/{{ job_id }}" method="post">
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {% for clip in clips %}
                 <div class="space-y-4 bg-slate-800 p-4 rounded-lg border border-slate-700"
-                     x-data="cropper('{{ clip.path }}')" x-init="init($refs.container)">
-                    <h3 class="font-semibold text-slate-200 truncate">{{ clip.name }}</h3>
+                     x-data="cropper()" x-init="init($refs.container)">
+                    
+                    <!-- *** ALTERAÇÃO 1: Exibe o título da IA aqui *** -->
+                    <h3 class="font-bold text-lg text-center text-blue-400 truncate" title="{{ clip.title }}">{{ clip.title }}</h3>
 
                     <div class="relative w-full aspect-video bg-black rounded-md overflow-hidden" 
                          @mousemove.prevent="handleMouseMove" @mouseup.prevent="stopAction" @mouseleave.prevent="stopAction"
@@ -57,6 +59,10 @@
 
                     <!-- Hidden inputs -->
                     <input type="hidden" name="clip_path_{{ loop.index0 }}" value="{{ clip.path }}">
+                    
+                    <!-- *** ALTERAÇÃO 2: Adiciona o título como um campo oculto para ser enviado *** -->
+                    <input type="hidden" name="clip_title_{{ loop.index0 }}" value="{{ clip.title }}">
+
                     <input type="hidden" :name="'roi1_x_{{ loop.index0 }}'" :value="roi1.x">
                     <input type="hidden" :name="'roi1_y_{{ loop.index0 }}'" :value="roi1.y">
                     <input type="hidden" :name="'roi1_w_{{ loop.index0 }}'" :value="roi1.w">
@@ -76,13 +82,20 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('cropper', (clipPath) => ({
-        roi1: { x: 10, y: 20, w: 30, h: 40 },
-        roi2: { x: 60, y: 40, w: 30, h: 40 },
+    // A lógica do Alpine.js permanece exatamente a mesma.
+    Alpine.data('cropper', () => ({
+        roi1: { x: 10, y: 15, w: 40, h: 50 }, // Valores iniciais ajustados
+        roi2: { x: 50, y: 35, w: 40, h: 50 }, // Valores iniciais ajustados
         containerRect: null,
         action: { type: null, roi: null, handle: null, startX: 0, startY: 0, startRoi: null },
         
-        init(container) { this.containerRect = container.getBoundingClientRect(); },
+        init(container) { 
+            // Garante que a medição do container seja feita após a renderização da página
+            // para maior precisão.
+            this.$nextTick(() => {
+                this.containerRect = container.getBoundingClientRect();
+            });
+        },
         
         startDrag(roi, event) {
             this.action = { type: 'drag', roi, startX: event.clientX, startY: event.clientY, startRoi: { ...this[roi] } };
@@ -96,23 +109,37 @@ document.addEventListener('alpine:init', () => {
 
         handleMouseMove(event) {
             if (!this.action.type) return;
+
+            // Recalcula o containerRect em cada movimento para lidar com redimensionamento da janela
+            this.containerRect = this.$refs.container.getBoundingClientRect();
+
             const dx = (event.clientX - this.action.startX) / this.containerRect.width * 100;
             const dy = (event.clientY - this.action.startY) / this.containerRect.height * 100;
             
             if (this.action.type === 'drag') {
-                this[this.action.roi].x = Math.max(0, Math.min(100 - this.action.startRoi.w, this.action.startRoi.x + dx));
-                this[this.action.roi].y = Math.max(0, Math.min(100 - this.action.startRoi.h, this.action.startRoi.y + dy));
+                const currentRoi = this[this.action.roi];
+                const startRoi = this.action.startRoi;
+                currentRoi.x = Math.max(0, Math.min(100 - startRoi.w, startRoi.x + dx));
+                currentRoi.y = Math.max(0, Math.min(100 - startRoi.h, startRoi.y + dy));
             } else if (this.action.type === 'resize') {
-                const r = this.action.startRoi;
-                if (this.action.handle.includes('e')) this[this.action.roi].w = Math.max(5, Math.min(100 - r.x, r.w + dx));
+                const currentRoi = this[this.action.roi];
+                const startRoi = this.action.startRoi;
+                
+                if (this.action.handle.includes('e')) currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
                 if (this.action.handle.includes('w')) {
-                    const newW = r.w - dx;
-                    if (newW > 5) { this[this.action.roi].w = newW; this[this.action.roi].x = r.x + dx; }
+                    const newWidth = startRoi.w - dx;
+                    if (newWidth > 5 && startRoi.x + dx >= 0) {
+                        currentRoi.w = newWidth;
+                        currentRoi.x = startRoi.x + dx;
+                    }
                 }
-                if (this.action.handle.includes('s')) this[this.action.roi].h = Math.max(5, Math.min(100 - r.y, r.h + dy));
+                if (this.action.handle.includes('s')) currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
                 if (this.action.handle.includes('n')) {
-                    const newH = r.h - dy;
-                    if (newH > 5) { this[this.action.roi].h = newH; this[this.action.roi].y = r.y + dy; }
+                    const newHeight = startRoi.h - dy;
+                    if (newHeight > 5 && startRoi.y + dy >= 0) {
+                        currentRoi.h = newHeight;
+                        currentRoi.y = startRoi.y + dy;
+                    }
                 }
             }
         }
