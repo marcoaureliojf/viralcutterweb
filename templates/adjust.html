@@ -82,7 +82,6 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
-    // A lógica do Alpine.js permanece exatamente a mesma.
     Alpine.data('cropper', () => ({
         roi1: { x: 10, y: 15, w: 40, h: 50 }, // Valores iniciais ajustados
         roi2: { x: 50, y: 35, w: 40, h: 50 }, // Valores iniciais ajustados
@@ -90,8 +89,6 @@ document.addEventListener('alpine:init', () => {
         action: { type: null, roi: null, handle: null, startX: 0, startY: 0, startRoi: null },
         
         init(container) { 
-            // Garante que a medição do container seja feita após a renderização da página
-            // para maior precisão.
             this.$nextTick(() => {
                 this.containerRect = container.getBoundingClientRect();
             });
@@ -110,12 +107,11 @@ document.addEventListener('alpine:init', () => {
         handleMouseMove(event) {
             if (!this.action.type) return;
 
-            // Recalcula o containerRect em cada movimento para lidar com redimensionamento da janela
             this.containerRect = this.$refs.container.getBoundingClientRect();
 
             const dx = (event.clientX - this.action.startX) / this.containerRect.width * 100;
             const dy = (event.clientY - this.action.startY) / this.containerRect.height * 100;
-            
+
             if (this.action.type === 'drag') {
                 const currentRoi = this[this.action.roi];
                 const startRoi = this.action.startRoi;
@@ -124,21 +120,31 @@ document.addEventListener('alpine:init', () => {
             } else if (this.action.type === 'resize') {
                 const currentRoi = this[this.action.roi];
                 const startRoi = this.action.startRoi;
-                
-                if (this.action.handle.includes('e')) currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
+                const roiRatio = 9 / 8; // proporção desejada
+                const containerRatio = this.containerRect.width / this.containerRect.height;
+
+                if (this.action.handle.includes('e')) {
+                    currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
+                    currentRoi.h = (currentRoi.w / roiRatio) * containerRatio;
+                }
                 if (this.action.handle.includes('w')) {
                     const newWidth = startRoi.w - dx;
                     if (newWidth > 5 && startRoi.x + dx >= 0) {
                         currentRoi.w = newWidth;
                         currentRoi.x = startRoi.x + dx;
+                        currentRoi.h = (currentRoi.w / roiRatio) * containerRatio;
                     }
                 }
-                if (this.action.handle.includes('s')) currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
+                if (this.action.handle.includes('s')) {
+                    currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
+                    currentRoi.w = (currentRoi.h * roiRatio) / containerRatio;
+                }
                 if (this.action.handle.includes('n')) {
                     const newHeight = startRoi.h - dy;
                     if (newHeight > 5 && startRoi.y + dy >= 0) {
                         currentRoi.h = newHeight;
                         currentRoi.y = startRoi.y + dy;
+                        currentRoi.w = (currentRoi.h * roiRatio) / containerRatio;
                     }
                 }
             }
@@ -146,5 +152,6 @@ document.addEventListener('alpine:init', () => {
     }));
 });
 </script>
+
 </body>
 </html>
