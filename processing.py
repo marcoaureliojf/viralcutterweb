@@ -42,7 +42,7 @@ def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: 
     try:
         generate_whisperx(input_video_path, output_dir='tmp', model=model, compute_type=compute_type, batch_size=batch_size)
         
-        viral_segments = create_viral_segments.create(num_segments=3, viral_mode=True, themes='', tempo_minimo=15, tempo_maximo=90)
+        viral_segments = create_viral_segments.create(num_segments=5, viral_mode=True, themes='', tempo_minimo=40, tempo_maximo=90)
         cut_files = cut_segments.cut(viral_segments, input_video_path)
 
         # --- MUDANÇA CRÍTICA AQUI ---

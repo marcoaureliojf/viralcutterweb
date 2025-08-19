@@ -28,9 +28,10 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     else:
         theme_prompt = f"com base nos seguintes temas: {themes}."
 
+    # Identifique {num_segments} segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos.
     prompt = f"""
-    "Com base na transcrição fornecida, atue como um especialista em cortes de vídeo para redes sociais, {theme_prompt}
-    Identifique {num_segments} segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos.
+    "Com base na transcrição fornecida, atue como um especialista em cortes de vídeo virais para redes sociais, {theme_prompt}
+    Identifique todos os segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos.
     Para cada segmento, forneça:
     - O tempo de início e fim (em segundos).
     - Um título curto e atraente (máximo de 5 palavras).

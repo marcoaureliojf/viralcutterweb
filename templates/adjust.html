@@ -39,7 +39,7 @@
                         </video>
                         
                         <!-- ROI 1: Top (Presenter) -->
-                        <div class="roi-box bg-blue-500/30" :style="`left: ${roi1.x}%; top: ${roi1.y}%; width: ${roi1.w}%; height: ${roi1.h}%`"
+                        <div class="roi-box bg-blue-500/60" :style="`left: ${roi1.x}%; top: ${roi1.y}%; width: ${roi1.w}%; height: ${roi1.h}%`"
                              @mousedown.prevent="startDrag('roi1', $event)">
                             <div class="handle handle-nw" @mousedown.prevent.stop="startResize('roi1', 'nw', $event)"></div>
                             <div class="handle handle-ne" @mousedown.prevent.stop="startResize('roi1', 'ne', $event)"></div>
@@ -48,7 +48,7 @@
                         </div>
 
                         <!-- ROI 2: Bottom (Guest/Presentation) -->
-                        <div class="roi-box bg-green-500/30" :style="`left: ${roi2.x}%; top: ${roi2.y}%; width: ${roi2.w}%; height: ${roi2.h}%`"
+                        <div class="roi-box bg-green-500/60" :style="`left: ${roi2.x}%; top: ${roi2.y}%; width: ${roi2.w}%; height: ${roi2.h}%`"
                              @mousedown.prevent="startDrag('roi2', $event)">
                             <div class="handle handle-nw" @mousedown.prevent.stop="startResize('roi2', 'nw', $event)"></div>
                             <div class="handle handle-ne" @mousedown.prevent.stop="startResize('roi2', 'ne', $event)"></div>
@@ -83,8 +83,8 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('cropper', () => ({
-        roi1: { x: 10, y: 15, w: 40, h: 50 }, // Valores iniciais ajustados
-        roi2: { x: 50, y: 35, w: 40, h: 50 }, // Valores iniciais ajustados
+        roi1: { x: 10, y: 15, w: 40, h: 50, color: 'yellow' }, // Valores iniciais ajustados
+        roi2: { x: 50, y: 35, w: 40, h: 50, color: 'red' }, // Valores iniciais ajustados
         containerRect: null,
         action: { type: null, roi: null, handle: null, startX: 0, startY: 0, startRoi: null },
         
