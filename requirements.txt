@@ -7,3 +7,5 @@ yt-dlp
 ffmpeg-python
 git+https://github.com/matheusbach/whisperx.git
 mediapipe
+requests
+pandas

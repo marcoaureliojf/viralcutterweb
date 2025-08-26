@@ -10,49 +10,29 @@
 <body class="bg-slate-900 text-slate-300 flex items-center justify-center min-h-screen font-sans p-4">
     <div x-data="videoForm()" class="w-full max-w-lg mx-auto bg-slate-800 border border-slate-700 rounded-2xl shadow-lg p-8">
         <div class="text-center">
-            <!-- Logo/Icon -->
-            <svg class="mx-auto h-12 w-12 text-violet-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" />
-            </svg>
+            <svg class="mx-auto h-12 w-12 text-violet-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" /></svg>
             <h1 class="text-3xl font-bold text-slate-100 mt-4">ViralCutter</h1>
             <p class="text-slate-400 mt-2">Transform long videos into viral shorts instantly.</p>
         </div>
 
         <form action="/upload/" method="post" enctype="multipart/form-data" class="mt-8 space-y-6">
-            <!-- Tabs for File/URL -->
-            <div class="rounded-lg bg-slate-900 p-1 flex">
-                <button type="button" @click="tab = 'file'" :class="{'bg-slate-700 text-white': tab === 'file', 'text-slate-400 hover:bg-slate-800': tab !== 'file'}" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none">
-                    Upload File
-                </button>
-                <button type="button" @click="tab = 'url'" :class="{'bg-slate-700 text-white': tab === 'url', 'text-slate-400 hover:bg-slate-800': tab !== 'url'}" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none">
-                    From URL
-                </button>
-            </div>
-
-            <!-- File Upload Section -->
-            <div x-show="tab === 'file'" x-transition>
-                <label 
-                    for="video-upload" 
-                    class="relative flex flex-col items-center justify-center w-full h-40 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800 hover:bg-slate-700 transition-colors"
-                    @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop"
-                    :class="{ 'border-violet-400 bg-slate-700': dragging }"
-                >
-                    <div class="flex flex-col items-center justify-center text-center">
-                        <svg class="w-8 h-8 mb-4 text-slate-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
-                        <p class="mb-2 text-sm text-slate-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                    </div>
-                    <input id="video-upload" name="video" type="file" class="hidden" @change="handleFileSelect" accept="video/*">
-                </label>
-                <!-- File Info Display -->
-                <div x-show="fileName" class="bg-slate-700/50 text-slate-300 text-sm rounded-lg p-3 mt-4 flex items-center justify-between transition-all">
-                    <span x-text="fileName" class="truncate"></span><button type="button" @click="removeFile" class="text-slate-500 hover:text-slate-300">&times;</button>
+            <!-- Upload Tabs (File/URL) -->
+            <div x-data="{ tab: 'file' }">
+                <div class="rounded-lg bg-slate-900 p-1 flex mb-4">
+                    <button type="button" @click="tab = 'file'" :class="{'bg-slate-700 text-white': tab === 'file', 'text-slate-400 hover:bg-slate-800': tab !== 'file'}" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none">Upload File</button>
+                    <button type="button" @click="tab = 'url'" :class="{'bg-slate-700 text-white': tab === 'url', 'text-slate-400 hover:bg-slate-800': tab !== 'url'}" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none">From URL</button>
                 </div>
-            </div>
-            
-            <!-- URL Input Section -->
-            <div x-show="tab === 'url'" x-transition>
-                <label for="video_url" class="block text-sm font-medium text-slate-300">Video URL (YouTube, etc.)</label>
-                <input type="url" name="video_url" id="video_url" x-model="videoUrl" class="mt-1 block w-full bg-slate-900 border-slate-600 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-sm" placeholder="https://www.youtube.com/watch?v=...">
+                <div x-show="tab === 'file'" x-transition>
+                    <label for="video-upload" class="relative flex flex-col items-center justify-center w-full h-40 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800 hover:bg-slate-700" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop" :class="{ 'border-violet-400 bg-slate-700': dragging }">
+                        <div class="flex flex-col items-center justify-center text-center"><svg class="w-8 h-8 mb-4 text-slate-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg><p class="mb-2 text-sm text-slate-400"><span class="font-semibold">Click to upload</span> or drag and drop</p></div>
+                        <input id="video-upload" name="video" type="file" class="hidden" @change="handleFileSelect" accept="video/*">
+                    </label>
+                    <div x-show="fileName" class="bg-slate-700/50 text-slate-300 text-sm rounded-lg p-3 mt-4 flex items-center justify-between"><span x-text="fileName" class="truncate"></span><button type="button" @click="removeFile" class="text-slate-500 hover:text-slate-300">&times;</button></div>
+                </div>
+                <div x-show="tab === 'url'" x-transition>
+                    <label for="video_url" class="block text-sm font-medium text-slate-300">Video URL (YouTube, etc.)</label>
+                    <input type="url" name="video_url" id="video_url" x-model="videoUrl" class="mt-1 block w-full bg-slate-900 border-slate-600 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-sm" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
             </div>
 
             <!-- Advanced Options -->
@@ -78,62 +58,42 @@
                     <label for="batch_size" class="block text-sm font-medium text-slate-300">Batch Size: <span x-text="batchSize" class="font-bold text-violet-400"></span></label>
                     <input id="batch_size" name="batch_size" type="range" min="1" max="5" x-model="batchSize" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
                 </div>
+                 <div class="relative flex items-start pt-2">
+                    <div class="flex h-6 items-center">
+                        <input id="dub_video" name="dub_video" x-model="dubVideo" type="checkbox" value="true" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-600 focus:ring-violet-600">
+                    </div>
+                    <div class="ml-3 text-sm leading-6">
+                        <label for="dub_video" class="font-medium text-slate-200">Dublar Vídeo (Experimental)</label>
+                        <p class="text-slate-400">Gera um novo áudio e legendas traduzidas.</p>
+                    </div>
+                </div>
+                <div x-show="dubVideo" x-transition>
+                    <label for="target_language" class="block text-sm font-medium text-slate-300">Idioma de Destino</label>
+                    <select id="target_language" name="target_language" class="mt-1 block w-full bg-slate-900 border-slate-600 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-sm">
+                        <option value="English">English (Inglês)</option>
+                        <option value="Spanish">Spanish (Espanhol)</option>
+                        <option value="French">French (Francês)</option>
+                        <option value="German">German (Alemão)</option>
+                        <option value="Portuguese">Portuguese (Português)</option>
+                        <option value="Italian">Italian (Italiano)</option>
+                    </select>
+                </div>
             </div>
 
-            <button 
-                type="submit" 
-                class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 focus:ring-offset-slate-800 disabled:bg-slate-500 disabled:cursor-not-allowed transition-all"
-                :disabled="!isReadyToSubmit()"
-            >
-                Generate Clips
-            </button>
-            <a href="/outputs" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Videos Processados</a>
+            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700 disabled:bg-slate-500 disabled:cursor-not-allowed" :disabled="!isReadyToSubmit()">Generate Clips</button>
         </form>
+        <a href="/outputs" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Videos Finalizados</a>
     </div>
 
     <script>
         function videoForm() {
             return {
-                tab: 'file',
-                dragging: false,
-                fileName: '',
-                videoUrl: '',
-                batchSize: 4,
-                handleFileSelect(event) {
-                    if (event.target.files.length > 0) {
-                        this.fileName = event.target.files[0].name;
-                        this.videoUrl = ''; // Clear URL if file is selected
-                    }
-                },
-                handleDrop(event) {
-                    this.dragging = false;
-                    const files = event.dataTransfer.files;
-                    if (files.length > 0 && files[0].type.startsWith('video/')) {
-                        document.getElementById('video-upload').files = files;
-                        this.fileName = files[0].name;
-                        this.videoUrl = ''; // Clear URL
-                    }
-                },
-                removeFile() {
-                    this.fileName = '';
-                    document.getElementById('video-upload').value = '';
-                },
-                isReadyToSubmit() {
-                    if (this.tab === 'file') {
-                        return this.fileName !== '';
-                    }
-                    if (this.tab === 'url') {
-                        // Basic URL validation
-                        try {
-                            new URL(this.videoUrl);
-                            return true;
-                        } catch (_) {
-                            return false;
-                        }
-                    }
-                    return false;
+                dragging: false, fileName: '', videoUrl: '', batchSize: 4, dubVideo: false,
+                handleFileSelect(event) { if (event.target.files.length > 0) { this.fileName = event.target.files[0].name; this.videoUrl = ''; } },
+                handleDrop(event) { this.dragging = false; const files = event.dataTransfer.files; if (files.length > 0 && files[0].type.startsWith('video/')) { document.getElementById('video-upload').files = files; this.fileName = files[0].name; this.videoUrl = ''; } },
+                removeFile() { this.fileName = ''; document.getElementById('video-upload').value = ''; },
+                isReadyToSubmit() { if (document.querySelector('#video-upload').value) return true; try { new URL(this.videoUrl); return true; } catch (_) { return false; } }
                 }
-            }
         }
     </script>
 </body>
