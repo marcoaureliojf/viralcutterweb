@@ -71,10 +71,12 @@ def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_ba
         # A lista de caminhos para os próximos passos é extraída do clips_data
         clip_paths = list(clips_data.keys())
 
-        for clip_path in clip_paths:
-             generate_whisperx(clip_path, output_dir='subs', model='medium', compute_type='float16', batch_size=2)
+        #Função inutilizada com o uso do PyCaps
+        #for clip_path in clip_paths:
+        #     generate_whisperx(clip_path, output_dir='subs', model='medium', compute_type='float16', batch_size=2)
         
-        adjust_subtitles.adjust(clip_paths)
+        #Função inutilizada com o uso do PyCaps
+        # adjust_subtitles.adjust(clip_paths)
 
         # A função edit_video agora recebe os dados completos, incluindo os títulos
         edit_video.edit(clips_data)
@@ -97,6 +99,6 @@ def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_ba
         print(f"\n❌ ERRO no processamento final do Job {job_id}: {str(e)}")
     finally:
         # Limpa as pastas temporárias
-        for dir_name in ['tmp', 'final', 'subs', 'subs_ass', 'burned_sub']:
+        for dir_name in ['tmp', 'final', 'subs_ass', 'burned_sub']:
             if os.path.exists(dir_name) and os.path.isdir(dir_name):
                 shutil.rmtree(dir_name)

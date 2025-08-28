@@ -104,7 +104,6 @@ async def finalize_job(request: Request, background_tasks: BackgroundTasks, job_
     background_tasks.add_task(finalize_process, job_id=job_id, jobs_dict=JOBS, clips_data=clips_data, original_base_name=original_name)
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
-# ... (restante do main.py, incluindo /status, /outputs, /download, /delete, etc., permanece igual)
 @app.get("/status/{job_id}", response_class=JSONResponse)
 async def get_status(job_id: str):
     job = JOBS.get(job_id)
