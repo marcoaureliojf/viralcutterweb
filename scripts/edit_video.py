@@ -98,12 +98,13 @@ def edit(clips_data: dict):
             print(f"❌ Erro no FFmpeg: {e.stderr}")
             raise
 
-        # --- Executa PyCaps (template 'hype') para gerar/queimar legendas automaticamente ---
-        print(f"🔥 Executando PyCaps (template 'hype') para gerar/queimar legendas...")
+        # --- Executa PyCaps (template) para gerar/queimar legendas automaticamente ---
+        template = 'word-focus'  # Template PyCaps para legendas (hype, vibrant, word-focus, line-focus, neo-minimal, minimalist, classic )
+        print(f"🔥 Executando PyCaps (template {template}) para gerar/queimar legendas...")
         try:
-            # Carrega o template 'hype' e obtém o builder (load(False) retorna o builder)
+            # Carrega o template e obtém o builder (load(False) retorna o builder)
             builder = (
-                TemplateLoader("word-focus")
+                TemplateLoader(template)
                 .with_input_video(intermediate_path)
                 .load(False)
             )
