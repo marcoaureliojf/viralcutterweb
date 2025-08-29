@@ -13,6 +13,7 @@ README.md
 
 # 2. Pastas de Mídia Geradas e Temporárias
 # Essencial para a velocidade do build. Nunca envie uploads ou outputs para o contexto.
+papo-de-preta/
 uploads/
 outputs/
 tmp/

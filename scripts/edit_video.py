@@ -1,7 +1,6 @@
 import cv2
 import subprocess
 import os
-import time
 from pycaps import TemplateLoader
 
 
@@ -71,12 +70,14 @@ def edit(clips_data: dict):
             f"scale={final_w}:{final_h_half}"
         )
 
+        # --- NOVO FILTER_COMPLEX COM RESET DE TIMESTAMPS ---
         filter_complex_string = (
-            f"[0:v]split=2[v1][v2];"
-            f"[v1]{filter_roi1}[top];"
-            f"[v2]{filter_roi2}[bottom];"
+            f"[0:v]{filter_roi1}[top];"
+            f"[0:v]{filter_roi2}[bottom];"
             f"[top][bottom]vstack=inputs=2[vstack_out];"
-            f"[vstack_out]{title_filter}[out]"
+            f"[vstack_out]{title_filter},"  # Adiciona uma vírgula aqui
+            f"setpts=PTS-STARTPTS[out_v];"  # Adiciona o filtro para resetar o PTS do vídeo
+            f"[0:a]asetpts=PTS-STARTPTS[out_a]"  # Adiciona o filtro para resetar o PTS do áudio
         )
 
         # --- Saída intermediária sem legendas ---
@@ -86,9 +87,16 @@ def edit(clips_data: dict):
         command = [
             'ffmpeg', '-i', video_path,
             '-filter_complex', filter_complex_string,
-            '-map', '[out]', '-map', '0:a?',
+            # Mapeia as saídas de vídeo e áudio do filter_complex
+            '-map', '[out_v]',
+            '-map', '[out_a]',
             '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
-            '-c:a', 'copy', '-y', intermediate_path
+            '-g', '30', '-keyint_min', '30',
+            '-vsync', '1', # 'vsync 1' é obsoleto, mas pode ser trocado por '-r 30' (ou fps do seu vídeo) se quiser
+            # O filtro 'aresample' não é mais necessário, pois o 'asetpts' já lida com a sincronia
+            '-c:a', 'aac', '-b:a', '192k',
+            '-movflags', '+faststart',
+            '-y', intermediate_path
         ]
 
         print(f"🎬 Gerando versão SEM legendas: {intermediate_path} ...")
@@ -99,66 +107,19 @@ def edit(clips_data: dict):
             raise
 
         # --- Executa PyCaps (template) para gerar/queimar legendas automaticamente ---
-        template = 'word-focus'  # Template PyCaps para legendas (hype, vibrant, word-focus, line-focus, neo-minimal, minimalist, classic )
+        template = 'papo-de-preta'
         print(f"🔥 Executando PyCaps (template {template}) para gerar/queimar legendas...")
         try:
-            # Carrega o template e obtém o builder (load(False) retorna o builder)
             builder = (
                 TemplateLoader(template)
                 .with_input_video(intermediate_path)
                 .load(False)
             )
-
-            # Se quiser adicionar CSS customizado programaticamente:
-            # builder.add_css("meu_estilo.css")
-
+            builder.with_output_video(final_output_path)
             pipeline = builder.build()
-
-            # Tentativa de forçar saída em `final_output_path`
-            try:
-                if hasattr(pipeline, "_output_video_path"):
-                    pipeline._output_video_path = final_output_path
-                    pipeline.run()
-                else:
-                    before = set(os.listdir(output_dir))
-                    pipeline.run()
-                    after = set(os.listdir(output_dir))
-
-                    new = sorted(
-                        [p for p in after - before if p.lower().endswith(('.mp4', '.mkv', '.webm'))],
-                        key=lambda n: os.path.getmtime(os.path.join(output_dir, n))
-                    )
-
-                    if new:
-                        produced = os.path.join(output_dir, new[-1])
-                        os.replace(produced, final_output_path)
-                    else:
-                        print("⚠️ Não consegui detectar o arquivo de saída do PyCaps automaticamente.")
-                        raise RuntimeError("Saída do PyCaps não encontrada automaticamente.")
-
-            except Exception as inner_exc:
-                print(f"⚠️ Tentativa direta de set_output/run falhou: {inner_exc}. "
-                      f"Tentando estratégia de detecção de arquivo...")
-
-                before = set(os.listdir(output_dir))
-                pipeline.run()
-                after = set(os.listdir(output_dir))
-
-                new = sorted(
-                    [p for p in after - before if p.lower().endswith(('.mp4', '.mkv', '.webm'))],
-                    key=lambda n: os.path.getmtime(os.path.join(output_dir, n))
-                )
-
-                if new:
-                    produced = os.path.join(output_dir, new[-1])
-                    os.replace(produced, final_output_path)
-                else:
-                    raise
-
+            pipeline.run()
             print(f"✅ Processo PyCaps concluído: {final_output_path}")
-
         except Exception as e:
-            # Se algo falhar no PyCaps, mantemos o intermediário
             print(f"❌ Erro ao rodar PyCaps (legendas): {e}")
             print("⚠️ Como fallback, vou manter a versão sem legendas como saída final.")
 
@@ -170,7 +131,6 @@ def edit(clips_data: dict):
             continue
 
         finally:
-            # Limpa intermediário
             if os.path.exists(intermediate_path):
                 try:
                     os.remove(intermediate_path)

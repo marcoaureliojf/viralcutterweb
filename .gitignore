@@ -10,6 +10,7 @@
 /burned_sub/
 /final/
 /node_modules/
+/papo-de-preta/
 
 # 2. Arquivos de Ambiente
 # NUNCA cometa arquivos .env! Eles contêm chaves de API, senhas e outros segredos.
