@@ -49,12 +49,14 @@ def get_transcript_chunks(df: pd.DataFrame, chunk_duration_sec: int, overlap_dur
 def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     """
     Analyzes the transcription and generates a list of potential viral segments,
-    using chunking with overlap for long videos.
+    using chunking with overlap for long videos. It also extracts keywords for each
+    segment and saves them to a separate .txt file.
     """
     print("Analisando transcrição para encontrar segmentos virais...")
 
     # Define the output path for the viral segments
     output_path = os.path.join('tmp', 'viral_segments.txt')
+    keywords_output_path = os.path.join('tmp', 'viral_segments_keywords.txt')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Read the transcription data
@@ -96,7 +98,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         else:
             theme_prompt = f"com base nos seguintes temas: {themes}."
 
-        # O prompt agora inclui o offset do chunk e instrui o LLM a retornar tempos absolutos
+        # O prompt agora inclui o offset do chunk e instrui o LLM a retornar tempos absolutos e palavras-chave
         prompt = f"""
         "Com base NESTE TRECHO DA TRANSCRIÇÃO, atue como um especialista em cortes de vídeo virais para redes sociais, {theme_prompt}
         Identifique todos os temas tratados e selecione segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos com as maiores pontuações de viralidade.
@@ -107,6 +109,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         - Um título em português, curto e atraente (máximo de 5 palavras).
         - Uma breve descrição do porquê esse segmento é um bom corte (máximo de 15 palavras).
         - Uma pontuação de 'viralidade' de 0 a 100.
+        - Uma lista de até 5 palavras-chave (keywords) em português que resumem o tema do segmento.
 
         A resposta DEVE ser um objeto JSON válido, sem nenhum texto adicional antes ou depois.
         O formato JSON deve ser:
@@ -117,7 +120,8 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
               "end": <end_time_in_seconds>,
               "title": "<title>",
               "description": "<description>",
-              "score": <score>
+              "score": <score>,
+              "keywords": ["<keyword1>", "<keyword2>", "..."]
             }}
           ]
         }}
@@ -136,11 +140,9 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
             chunk_viral_segments = json.loads(cleaned_response)
             
             # Adicionar os segmentos do chunk à lista geral
-            # O prompt já pede tempos absolutos, então não precisamos ajustar aqui,
-            # mas é bom ter uma verificação.
             for segment in chunk_viral_segments.get('segments', []):
                 # Basic validation: ensure times are within reasonable bounds
-                if segment['start'] >= 0 and segment['end'] > segment['start']:
+                if segment.get('start', -1) >= 0 and segment.get('end', 0) > segment.get('start', -1):
                     all_potential_segments.append(segment)
 
         except json.JSONDecodeError as e:
@@ -152,24 +154,21 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     # --- Pós-processamento: Remover Duplicatas e Selecionar os Melhores ---
     print("Agregando e filtrando segmentos de todos os chunks...")
 
-    # Remover segmentos que se sobrepõem muito (considerando a sobreposição de chunks)
-    # Uma forma simples é criar uma "chave" para cada segmento e usar um set
     unique_segments = {}
     for segment in all_potential_segments:
         # Arredondar tempos para evitar problemas de float e considerá-los "iguais" se estiverem muito próximos
         # Usar uma tupla (start_rounded, end_rounded, title) como chave para identificar "duplicatas"
-        key = (round(segment['start'], 1), round(segment['end'], 1), segment['title'].lower())
+        key = (round(segment.get('start', 0), 1), round(segment.get('end', 0), 1), segment.get('title', '').lower())
         
         # Se um segmento com a mesma chave já existe, mantenha o de maior score
-        if key not in unique_segments or segment['score'] > unique_segments[key]['score']:
+        if key not in unique_segments or segment.get('score', 0) > unique_segments[key].get('score', 0):
             unique_segments[key] = segment
 
     final_segments = list(unique_segments.values())
 
     # Ordenar por score de viralidade (descendente) e pegar os 'num_segments' melhores
-    final_segments.sort(key=lambda x: x['score'], reverse=True)
+    final_segments.sort(key=lambda x: x.get('score', 0), reverse=True)
     
-    # Se num_segments for 0 ou negativo, ou muito grande, pode haver problemas.
     # Garante que pegue no máximo o número de segmentos disponíveis.
     final_segments_to_save = {"segments": final_segments[:max(0, num_segments)]}
 
@@ -178,4 +177,24 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         json.dump(final_segments_to_save, f, ensure_ascii=False, indent=4)
 
     print(f"Segmentos virais finais ({len(final_segments_to_save['segments'])} selecionados) salvos em {output_path}")
+
+    # --- NOVO: Salvar Palavras-chave em arquivo .txt ---
+    all_keywords = []
+    for segment in final_segments_to_save.get('segments', []):
+        # Garante que 'keywords' exista, seja uma lista e não esteja vazia
+        if 'keywords' in segment and isinstance(segment['keywords'], list):
+            all_keywords.extend(segment['keywords'])
+
+    # Salva as palavras-chave se alguma tiver sido encontrada
+    if all_keywords:
+        with open(keywords_output_path, 'w', encoding='utf-8') as f:
+            for keyword in all_keywords:
+                # Garante que o keyword seja uma string antes de escrever
+                if isinstance(keyword, str):
+                    f.write(f"{keyword.strip()}\n")
+        print(f"Palavras-chave dos segmentos virais salvas em {keywords_output_path}")
+    else:
+        print("Nenhuma palavra-chave foi gerada para os segmentos selecionados.")
+    # --- FIM DO NOVO BLOCO ---
+
     return final_segments_to_save

@@ -128,14 +128,34 @@ async def delete_video(filename: str):
     if os.path.exists(path): os.remove(path)
     return RedirectResponse(url="/outputs", status_code=303)
 
+from fastapi import BackgroundTasks
+from fastapi.responses import FileResponse, RedirectResponse
+import os, zipfile
+
 @app.get("/download-all")
 async def download_all_videos():
-    outputs_dir = "outputs"; video_files = [f for f in os.listdir(outputs_dir) if f.endswith('.mp4')]
-    if not video_files: return RedirectResponse(url="/outputs")
-    zip_path = os.path.join("tmp", "viralcutter_videos.zip")
+    outputs_dir = "outputs"
+    video_files = [f for f in os.listdir(outputs_dir) if f.endswith('.mp4')]
+    
+    if not video_files:
+        return RedirectResponse(url="/outputs")
+    
+    # Garante que a pasta tmp exista
+    tmp_dir = "tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    
+    zip_path = os.path.join(tmp_dir, "viralcutter_videos.zip")
     with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for video in video_files: zipf.write(os.path.join(outputs_dir, video), arcname=video)
-    return FileResponse(zip_path, media_type='application/zip', filename='viralcutter_videos.zip', background=BackgroundTask(os.remove, zip_path))
+        for video in video_files:
+            zipf.write(os.path.join(outputs_dir, video), arcname=video)
+    
+    return FileResponse(
+        zip_path,
+        media_type='application/zip',
+        filename='viralcutter_videos.zip',
+        background=BackgroundTasks().add_task(os.remove, zip_path)
+    )
+
 
 @app.post("/delete-all")
 async def delete_all_videos():

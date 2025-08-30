@@ -2,7 +2,7 @@ import os
 import subprocess
 import json
 import shutil
-from scripts import create_viral_segments, cut_segments, edit_video, adjust_subtitles
+from scripts import create_viral_segments, cut_segments, edit_video
 from glob import glob
 
 def generate_whisperx(input_file: str, output_dir: str, model: str, compute_type: str, batch_size: int):
