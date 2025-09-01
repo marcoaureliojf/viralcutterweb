@@ -1,6 +1,7 @@
 import cv2
 import subprocess
 import os
+from .pycaps_processing import process_with_pycaps  # Importa o novo script
 from pycaps import *
 
 def get_video_fps(video_path: str) -> str | None:
@@ -138,6 +139,7 @@ def edit(clips_data: dict):
         # --- Saída intermediária sem legendas ---
         intermediate_path = os.path.join(output_dir, f"{base_name}_no_subs.mp4")
         final_output_path = os.path.join(output_dir, f"{base_name}_final.mp4")
+        keywords_output_path = os.path.join('tmp', 'viral_segments_keywords.txt')
         
         command = [
             'ffmpeg', '-i', video_path,
@@ -146,10 +148,8 @@ def edit(clips_data: dict):
             '-map', '[out_a]',
             '-c:v', 'libx264', '-preset', 'slow', '-crf', '18',
             '-g', '30', '-keyint_min', '30',
-            # --- ALTERAÇÕES AQUI ---
             '-r', framerate, 
             '-vsync', 'cfr',     
-            # -------------------------
             '-c:a', 'aac', '-b:a', '192k',
             '-movflags', '+faststart',
             '-y', intermediate_path
@@ -162,49 +162,7 @@ def edit(clips_data: dict):
             print(f"❌ Erro no FFmpeg: {e.stderr}")
             raise
         
-        
-        # --- 1. Create a custom tagger ---
-        tagger = SemanticTagger()
-        tagger.add_regex_rule(Tag("shoutout"), r"(?i)shoutout to \w+") # Case insensitive regex for "shoutout to <word>" 
-        tagger.add_wordlist_rule(Tag("important"), ["key", "critical", "important"])
-        # --- Executa PyCaps (template) para gerar/queimar legendas automaticamente ---
-        template = 'papo-de-preta'
-        print(f"🔥 Executando PyCaps (template {template}) para gerar/queimar legendas...")
-        try:
-            builder = (
-                TemplateLoader(template)
-                .with_input_video(intermediate_path)
-                .load(False)
-            )
-            builder.with_output_video(final_output_path)
-            builder.with_video_quality(VideoQuality.HIGH)
-            builder.with_semantic_tagger(tagger)
-            builder.with_whisper_config(model_size='medium')
-            builder.add_animation(
-                animation=ZoomOut(duration=0.2),
-                when=EventType.ON_NARRATION_STARTS,
-                what=ElementType.WORD,
-                tag_condition=TagConditionFactory.parse("important")
-            )
-            pipeline = builder.build()
-            pipeline.run()
-            print(f"✅ Processo PyCaps concluído: {final_output_path}")
-        except Exception as e:
-            print(f"❌ Erro ao rodar PyCaps (legendas): {e}")
-            print("⚠️ Como fallback, vou manter a versão sem legendas como saída final.")
-
-            if os.path.exists(intermediate_path):
-                if os.path.exists(final_output_path):
-                    os.remove(final_output_path)
-                os.rename(intermediate_path, final_output_path)
-
-            continue
-
-        finally:
-            if os.path.exists(intermediate_path):
-                try:
-                    os.remove(intermediate_path)
-                except Exception:
-                    pass
+        # --- Chama o script de legendas ---
+        process_with_pycaps(intermediate_path, final_output_path, keywords_output_path)
 
     print("Todos os vídeos processados.")
