@@ -1,8 +1,7 @@
 import cv2
 import subprocess
 import os
-from .pycaps_processing import process_with_pycaps  # Importa o novo script
-from pycaps import *
+from .pycaps_processing import process_with_pycaps
 
 def get_video_fps(video_path: str) -> str | None:
     """
@@ -50,7 +49,7 @@ def get_video_fps(video_path: str) -> str | None:
         return None
 
 
-def edit(clips_data: dict):
+def edit(clips_data: dict, pycaps_template: str):
     """
     Mantém a edição de TELA DIVIDIDA + TÍTULO com FFmpeg (gera vídeo intermediário),
     e então usa PyCaps (TemplateLoader('hype')) para gerar/queimar legendas automaticamente.
@@ -128,24 +127,28 @@ def edit(clips_data: dict):
 
         # --- NOVO FILTER_COMPLEX COM RESET DE TIMESTAMPS ---
         filter_complex_string = (
-            f"[0:v]{filter_roi1}[top];"
-            f"[0:v]{filter_roi2}[bottom];"
-            f"[top][bottom]vstack=inputs=2[vstack_out];"
-            f"[vstack_out]{title_filter},"  # Adiciona uma vírgula aqui
-            f"setpts=PTS-STARTPTS[out_v];"  # Adiciona o filtro para resetar o PTS do vídeo
-            f"[0:a]asetpts=PTS-STARTPTS[out_a]"  # Adiciona o filtro para resetar o PTS do áudio
+            # Reset timestamps e primeira transformação
+            f"[0:v]setpts=PTS-STARTPTS,{filter_roi1}[top];"
+            # Reset timestamps e segunda transformação
+            f"[0:v]setpts=PTS-STARTPTS,{filter_roi2}[bottom];"
+            # Combina as duas partes
+            f"[top][bottom]vstack=inputs=2[stacked];"
+            # Adiciona o título
+            f"[stacked]{title_filter}[video_out];"
+            # Reset timestamp do áudio separadamente
+            f"[0:a]asetpts=PTS-STARTPTS[audio_out]"
         )
 
         # --- Saída intermediária sem legendas ---
         intermediate_path = os.path.join(output_dir, f"{base_name}_no_subs.mp4")
         final_output_path = os.path.join(output_dir, f"{base_name}_final.mp4")
-        keywords_output_path = os.path.join('tmp', 'viral_segments_keywords.txt')
+        trasncription_output_path = os.path.join('tmp', f"{base_name}.tsv")
         
         command = [
-            'ffmpeg', '-i', video_path,
+            'ffmpeg', '-i', video_path,  # Removido '-c:v', 'libdav1d',
             '-filter_complex', filter_complex_string,
-            '-map', '[out_v]',
-            '-map', '[out_a]',
+            '-map', '[video_out]',
+            '-map', '[audio_out]',
             '-c:v', 'libx264', '-preset', 'slow', '-crf', '18',
             '-g', '30', '-keyint_min', '30',
             '-r', framerate, 
@@ -163,6 +166,6 @@ def edit(clips_data: dict):
             raise
         
         # --- Chama o script de legendas ---
-        process_with_pycaps(intermediate_path, final_output_path, keywords_output_path)
+        process_with_pycaps(intermediate_path, final_output_path, trasncription_output_path, pycaps_template)
 
     print("Todos os vídeos processados.")

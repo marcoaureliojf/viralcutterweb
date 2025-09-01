@@ -34,15 +34,15 @@ def generate_whisperx(input_file: str, output_dir: str, model: str, compute_type
         return expected_tsv
     except subprocess.CalledProcessError as e: print(f"\n❌ ERRO WhisperX:\nStderr: {e.stderr}"); raise
 
-def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: str, compute_type: str, batch_size: int):
+def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: str, compute_type: str, batch_size: int, pycaps_template: str):
     """
     Etapa 1: Transcreve o vídeo principal e o corta em segmentos.
     """
-    print(f"Iniciando processamento inicial para o Job ID: {job_id}")
+    print(f"Iniciando processamento inicial para o Job ID: {job_id} com o template PyCaps: {pycaps_template}")
     try:
         generate_whisperx(input_video_path, output_dir='tmp', model=model, compute_type=compute_type, batch_size=batch_size)
         
-        viral_segments = create_viral_segments.create(num_segments=10, viral_mode=True, themes='', tempo_minimo=40, tempo_maximo=90)
+        viral_segments = create_viral_segments.create(num_segments=10, viral_mode=True, themes='', tempo_minimo=40, tempo_maximo=120)
         cut_files = cut_segments.cut(viral_segments, input_video_path)
 
         # --- MUDANÇA CRÍTICA AQUI ---
@@ -62,24 +62,14 @@ def initial_process(job_id: str, jobs_dict: dict, input_video_path: str, model: 
         jobs_dict[job_id]["status"] = "error"
         print(f"\n❌ ERRO no processamento inicial do Job {job_id}: {str(e)}")
 
-def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_base_name: str):
+def finalize_process(job_id: str, jobs_dict: dict, clips_data: dict, original_base_name: str, pycaps_template: str):
     """
     Etapa 2: Pega os dados de ajuste, cria legendas, e então reenquadra E queima as legendas/títulos de uma só vez.
     """
     print(f"Iniciando processamento final para o Job ID: {job_id}")
     try:
-        # A lista de caminhos para os próximos passos é extraída do clips_data
-        clip_paths = list(clips_data.keys())
-
-        #Função inutilizada com o uso do PyCaps
-        #for clip_path in clip_paths:
-        #     generate_whisperx(clip_path, output_dir='subs', model='medium', compute_type='float16', batch_size=2)
-        
-        #Função inutilizada com o uso do PyCaps
-        # adjust_subtitles.adjust(clip_paths)
-
-        # A função edit_video agora recebe os dados completos, incluindo os títulos
-        edit_video.edit(clips_data)
+        # Passa o pycaps_template para a função edit
+        edit_video.edit(clips_data, pycaps_template)
 
         source_folder = 'burned_sub'
         destination_folder = 'outputs'

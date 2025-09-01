@@ -50,11 +50,11 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     """
     Analyzes the transcription and generates a list of potential viral segments,
     using chunking with overlap for long videos. It also extracts keywords for each
-    segment and saves them to a separate .txt file.
+    segment and saves them to separate .tsv files corresponding to the video segments.
     """
     print("Analisando transcrição para encontrar segmentos virais...")
 
-    # Define the output path for the viral segments
+    # Define the output paths
     output_path = os.path.join('tmp', 'viral_segments.txt')
     keywords_output_path = os.path.join('tmp', 'viral_segments_keywords.txt')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -76,7 +76,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
 
     # --- Configuração de Chunking ---
     CHUNK_DURATION_SEC = 600  # 10 minutos por chunk
-    OVERLAP_DURATION_SEC = 60   # 1 minuto de sobreposição
+    OVERLAP_DURATION_SEC = 10   # 10 segundos de sobreposição
 
     transcript_chunks = get_transcript_chunks(df, CHUNK_DURATION_SEC, OVERLAP_DURATION_SEC)
     
@@ -103,6 +103,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         "Com base NESTE TRECHO DA TRANSCRIÇÃO, atue como um especialista em cortes de vídeo virais para redes sociais, {theme_prompt}
         Identifique todos os temas tratados e selecione segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos com as maiores pontuações de viralidade.
         Caso identifique mais de um tema na descrição, tente distribuir os segmentos entre os temas. Ignore introduções longas e pausas.
+        OS SEGMENTOS DEVEM FAZER SENTIDO POR SI SÓ, mesmo que vistos fora de contexto.
         É CRÍTICO que os tempos de início e fim (start e end) sejam ABSOLUTOS em relação ao início do VÍDEO COMPLETO, considerando que este trecho da transcrição inicia aproximadamente no segundo {chunk_offset:.2f} do vídeo original.
         Para cada segmento, forneça:
         - O tempo de início e fim (em segundos), ABSOLUTO em relação ao início do vídeo.
@@ -178,23 +179,18 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
 
     print(f"Segmentos virais finais ({len(final_segments_to_save['segments'])} selecionados) salvos em {output_path}")
 
-    # --- NOVO: Salvar Palavras-chave em arquivo .txt ---
-    all_keywords = []
-    for segment in final_segments_to_save.get('segments', []):
-        # Garante que 'keywords' exista, seja uma lista e não esteja vazia
-        if 'keywords' in segment and isinstance(segment['keywords'], list):
-            all_keywords.extend(segment['keywords'])
-
-    # Salva as palavras-chave se alguma tiver sido encontrada
-    if all_keywords:
-        with open(keywords_output_path, 'w', encoding='utf-8') as f:
-            for keyword in all_keywords:
-                # Garante que o keyword seja uma string antes de escrever
-                if isinstance(keyword, str):
-                    f.write(f"{keyword.strip()}\n")
-        print(f"Palavras-chave dos segmentos virais salvas em {keywords_output_path}")
-    else:
-        print("Nenhuma palavra-chave foi gerada para os segmentos selecionados.")
+    # --- NOVO: Gerar transcrição dos segmentos ---
+    print("Gerando transcrição dos segmentos selecionados...")
+    for idx, segment in enumerate(final_segments_to_save.get('segments', [])):
+        start_time = segment.get('start', 0)
+        end_time = segment.get('end', 0)
+        transcription_output_path = os.path.join('tmp', f"output{idx:03d}.tsv")
+        with open(transcription_output_path, 'w', encoding='utf-8') as f:
+            f.write("start\tend\ttext\n")  # Cabeçalho do arquivo TSV
+            segment_transcription = df[(df['start'] >= start_time) & (df['end'] <= end_time)]
+            for _, row in segment_transcription.iterrows():
+                f.write(f"{row['start']:.3f}\t{row['end']:.3f}\t{row['text']}\n")
+        print(f"Transcrição do segmento {idx} salva em {transcription_output_path}")
     # --- FIM DO NOVO BLOCO ---
 
     return final_segments_to_save

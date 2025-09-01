@@ -30,27 +30,48 @@ async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/upload/", response_class=HTMLResponse)
-async def upload_video(background_tasks: BackgroundTasks, request: Request, model: str = Form(...), compute_type: str = Form(...), batch_size: int = Form(...), video: UploadFile = File(None), video_url: str = Form(None)):
-    if not video and not video_url: raise HTTPException(status_code=400, detail="Nenhum arquivo de vídeo ou URL fornecido.")
+async def upload_video(background_tasks: BackgroundTasks, request: Request, model: str = Form(...), compute_type: str = Form(...), batch_size: int = Form(...), pycaps_template: str = Form(...), video: UploadFile = File(None), video_url: str = Form(None)):
+    if not video and not video_url: 
+        raise HTTPException(status_code=400, detail="Nenhum arquivo de vídeo ou URL fornecido.")
     
     video_path = ""
     if video and video.filename:
         video_path = os.path.join("uploads", video.filename)
-        with open(video_path, "wb") as buffer: shutil.copyfileobj(video.file, buffer)
+        with open(video_path, "wb") as buffer:
+            shutil.copyfileobj(video.file, buffer)
     elif video_url:
-        upload_dir = "uploads"; unique_filename = f"{uuid.uuid4()}.mp4"; video_path = os.path.join(upload_dir, unique_filename)
+        upload_dir = "uploads"
+        unique_filename = f"{uuid.uuid4()}.mp4"
+        video_path = os.path.join(upload_dir, unique_filename)
         ydl_opts = {'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', 'outtmpl': video_path, 'noplaylist': True}
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl: ydl.download([video_url])
-        except Exception as e: raise HTTPException(status_code=400, detail=f"Não foi possível baixar o vídeo. Erro: {e}")
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([video_url])
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Não foi possível baixar o vídeo. Erro: {e}")
 
-    if not video_path or not os.path.exists(video_path): raise HTTPException(status_code=500, detail="Falha ao salvar ou baixar o vídeo.")
+    if not video_path or not os.path.exists(video_path):
+        raise HTTPException(status_code=500, detail="Falha ao salvar ou baixar o vídeo.")
     
     original_base_name = os.path.splitext(os.path.basename(video_path))[0]
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "processing", "clips": [], "original_name": original_base_name}
+    JOBS[job_id] = {
+        "status": "processing",
+        "clips": [],
+        "original_name": original_base_name,
+        "pycaps_template": pycaps_template  # Armazena o template no dicionário JOBS
+    }
     
-    background_tasks.add_task(initial_process, job_id=job_id, jobs_dict=JOBS, input_video_path=video_path, model=model, compute_type=compute_type, batch_size=batch_size)
+    background_tasks.add_task(
+        initial_process,
+        job_id=job_id,
+        jobs_dict=JOBS,
+        input_video_path=video_path,
+        model=model,
+        compute_type=compute_type,
+        pycaps_template=pycaps_template,
+        batch_size=batch_size
+    )
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
 @app.get("/adjust/{job_id}", response_class=HTMLResponse)
@@ -81,27 +102,44 @@ async def adjust_page(request: Request, job_id: str = Path(...)):
 @app.post("/finalize/{job_id}", response_class=HTMLResponse)
 async def finalize_job(request: Request, background_tasks: BackgroundTasks, job_id: str = Path(...)):
     job = JOBS.get(job_id)
-    if not job: raise HTTPException(status_code=404, detail="Job não encontrado.")
+    if not job:
+        raise HTTPException(status_code=404, detail="Job não encontrado.")
     
     form_data = await request.form()
     clips_data = {}
     i = 0
-    # --- MUDANÇA CRÍTICA AQUI ---
-    # O loop agora lê o caminho E o título do formulário para cada clipe.
     while f"clip_path_{i}" in form_data:
         path = form_data[f"clip_path_{i}"]
-        title = form_data.get(f"clip_title_{i}", "Título não encontrado") # Pega o título do novo campo
+        title = form_data.get(f"clip_title_{i}", "Título não encontrado")
         clips_data[path] = {
-            'title': title, # Armazena o título
-            'roi1': {'x': float(form_data[f"roi1_x_{i}"]), 'y': float(form_data[f"roi1_y_{i}"]), 'w': float(form_data[f"roi1_w_{i}"]), 'h': float(form_data[f"roi1_h_{i}"])},
-            'roi2': {'x': float(form_data[f"roi2_x_{i}"]), 'y': float(form_data[f"roi2_y_{i}"]), 'w': float(form_data[f"roi2_w_{i}"]), 'h': float(form_data[f"roi2_h_{i}"])}
+            'title': title,
+            'roi1': {
+                'x': float(form_data[f"roi1_x_{i}"]),
+                'y': float(form_data[f"roi1_y_{i}"]),
+                'w': float(form_data[f"roi1_w_{i}"]),
+                'h': float(form_data[f"roi1_h_{i}"])
+            },
+            'roi2': {
+                'x': float(form_data[f"roi2_x_{i}"]),
+                'y': float(form_data[f"roi2_y_{i}"]),
+                'w': float(form_data[f"roi2_w_{i}"]),
+                'h': float(form_data[f"roi2_h_{i}"])
+            }
         }
         i += 1
-            
+
     job["status"] = "finalizing"
     original_name = job.get("original_name", "video_sem_nome")
+    pycaps_template = job.get("pycaps_template", "default")  # Recupera o template armazenado no JOBS
     
-    background_tasks.add_task(finalize_process, job_id=job_id, jobs_dict=JOBS, clips_data=clips_data, original_base_name=original_name)
+    background_tasks.add_task(
+        finalize_process,
+        job_id=job_id,
+        jobs_dict=JOBS,
+        clips_data=clips_data,
+        original_base_name=original_name,
+        pycaps_template=pycaps_template
+    )
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
 @app.get("/status/{job_id}", response_class=JSONResponse)

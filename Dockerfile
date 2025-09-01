@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     curl \
     wget \
+    intel-media-va-driver-non-free \
     && rm -rf /var/lib/apt/lists/*
 
 # Install a modern version of Node.js (LTS v20)

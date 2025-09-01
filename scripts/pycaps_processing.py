@@ -1,16 +1,12 @@
 import os
 from pycaps import *
 
-def process_with_pycaps(intermediate_path: str, final_output_path: str, keywords_output_path: str):
+def process_with_pycaps(intermediate_path: str, final_output_path: str, trasncription_output_path: str, template: str):
     """
     Processa um vídeo intermediário com PyCaps para gerar/queimar legendas automaticamente.
     """
-    # --- 1. Create a custom tagger ---
-    tagger = SemanticTagger()
-    tagger.add_wordlist_rule(Tag("important"), wordlist=keywords_output_path)
-
+    
     # --- Configurações do template ---
-    template = 'word-focus'
     print(f"🔥 Executando PyCaps (template {template}) para gerar/queimar legendas...")
 
     builder = (
@@ -19,15 +15,6 @@ def process_with_pycaps(intermediate_path: str, final_output_path: str, keywords
         .load(False)
     )
     builder.with_output_video(final_output_path)
-    builder.with_video_quality(VideoQuality.HIGH)
-    builder.with_semantic_tagger(tagger)
-    builder.with_whisper_config(model_size='small')
-    builder.add_animation(
-        animation=PopInBounce(duration=0.5),
-        when=EventType.ON_NARRATION_STARTS,
-        what=ElementType.WORD,
-        tag_condition=TagConditionFactory.parse("important")
-    )
 
     pipeline = builder.build()
     try:
@@ -37,7 +24,6 @@ def process_with_pycaps(intermediate_path: str, final_output_path: str, keywords
         print(f"❌ Erro ao rodar PyCaps (legendas): {e}")
         print("⚠️ Como fallback, vou manter a versão sem legendas como saída final.")
 
-        if os.path.exists(intermediate_path):
-            if os.path.exists(final_output_path):
-                os.remove(final_output_path)
-            os.rename(intermediate_path, final_output_path)
+    if os.path.exists(intermediate_path):
+        if os.path.exists(final_output_path):
+            os.remove(intermediate_path)
