@@ -14,20 +14,13 @@ from processing import initial_process, finalize_process
 # --- CONFIGURAÇÃO DA APLICAÇÃO ---
 app = FastAPI()
 
-# Cria os diretórios necessários na inicialização
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("outputs", exist_ok=True)
-os.makedirs("tmp", exist_ok=True)
+os.makedirs("uploads", exist_ok=True); os.makedirs("outputs", exist_ok=True); os.makedirs("tmp", exist_ok=True)
 
-# Monta os diretórios estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/clips", StaticFiles(directory="tmp"), name="clips")
-app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs") # Novo: para visualizar vídeos na página de saída
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 
-# Configura os templates
 templates = Jinja2Templates(directory="templates")
-
-# Dicionário em memória para armazenar o status dos jobs
 JOBS = {}
 
 # --- ENDPOINTS PRINCIPAIS DA APLICAÇÃO ---
@@ -37,8 +30,8 @@ async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/upload/", response_class=HTMLResponse)
-async def upload_video(background_tasks: BackgroundTasks, request: Request, model: str = Form(...), compute_type: str = Form(...), batch_size: int = Form(...), video: UploadFile = File(None), video_url: str = Form(None)):
-    if not video and not video_url:
+async def upload_video(background_tasks: BackgroundTasks, request: Request, model: str = Form(...), compute_type: str = Form(...), batch_size: int = Form(...), pycaps_template: str = Form(...), video: UploadFile = File(None), video_url: str = Form(None)):
+    if not video and not video_url: 
         raise HTTPException(status_code=400, detail="Nenhum arquivo de vídeo ou URL fornecido.")
     
     video_path = ""
@@ -50,7 +43,7 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
         upload_dir = "uploads"
         unique_filename = f"{uuid.uuid4()}.mp4"
         video_path = os.path.join(upload_dir, unique_filename)
-        ydl_opts = {'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', 'outtmpl': video_path, 'noplaylist': True}
+        ydl_opts = {"format": "bestvideo[height=1080][ext=mp4]+bestaudio[ext=m4a]/best[height=1080][ext=mp4]/bestvideo[height=720][ext=mp4]+bestaudio[ext=m4a]/best[height=720][ext=mp4]", 'outtmpl': video_path, 'noplaylist': True}
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([video_url])
@@ -62,16 +55,29 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
     
     original_base_name = os.path.splitext(os.path.basename(video_path))[0]
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "processing", "clips": [], "original_name": original_base_name}
+    JOBS[job_id] = {
+        "status": "processing",
+        "clips": [],
+        "original_name": original_base_name,
+        "pycaps_template": pycaps_template  # Armazena o template no dicionário JOBS
+    }
     
-    background_tasks.add_task(initial_process, job_id=job_id, jobs_dict=JOBS, input_video_path=video_path, model=model, compute_type=compute_type, batch_size=batch_size)
+    background_tasks.add_task(
+        initial_process,
+        job_id=job_id,
+        jobs_dict=JOBS,
+        input_video_path=video_path,
+        model=model,
+        compute_type=compute_type,
+        pycaps_template=pycaps_template,
+        batch_size=batch_size
+    )
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
 @app.get("/adjust/{job_id}", response_class=HTMLResponse)
 async def adjust_page(request: Request, job_id: str = Path(...)):
     job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job não encontrado.")
+    if not job: raise HTTPException(status_code=404, detail="Job não encontrado.")
     
     if job["status"] in ["processing", "finalizing"]:
         return templates.TemplateResponse("result.html", {"request": request, "job_id": job_id})
@@ -79,7 +85,18 @@ async def adjust_page(request: Request, job_id: str = Path(...)):
     if job["status"] == "complete":
         return RedirectResponse(url="/outputs", status_code=303)
 
-    clips_for_template = [{"name": os.path.basename(p), "path": p, "url": f"/clips/{os.path.basename(p)}"} for p in job.get("clips", [])]
+    # --- MUDANÇA CRÍTICA AQUI ---
+    # Prepara os dados para o template, garantindo que o nome do arquivo e a URL também sejam passados.
+    clips_for_template = []
+    for clip_data in job.get("clips", []):
+        path = clip_data["path"]
+        clips_for_template.append({
+            "path": path,
+            "title": clip_data["title"],
+            "name": os.path.basename(path),
+            "url": f"/clips/{os.path.basename(path)}"
+        })
+
     return templates.TemplateResponse("adjust.html", {"request": request, "job_id": job_id, "clips": clips_for_template})
 
 @app.post("/finalize/{job_id}", response_class=HTMLResponse)
@@ -93,26 +110,43 @@ async def finalize_job(request: Request, background_tasks: BackgroundTasks, job_
     i = 0
     while f"clip_path_{i}" in form_data:
         path = form_data[f"clip_path_{i}"]
+        title = form_data.get(f"clip_title_{i}", "Título não encontrado")
         clips_data[path] = {
-            'roi1': {'x': float(form_data[f"roi1_x_{i}"]), 'y': float(form_data[f"roi1_y_{i}"]), 'w': float(form_data[f"roi1_w_{i}"]), 'h': float(form_data[f"roi1_h_{i}"])},
-            'roi2': {'x': float(form_data[f"roi2_x_{i}"]), 'y': float(form_data[f"roi2_y_{i}"]), 'w': float(form_data[f"roi2_w_{i}"]), 'h': float(form_data[f"roi2_h_{i}"])}
+            'title': title,
+            'roi1': {
+                'x': float(form_data[f"roi1_x_{i}"]),
+                'y': float(form_data[f"roi1_y_{i}"]),
+                'w': float(form_data[f"roi1_w_{i}"]),
+                'h': float(form_data[f"roi1_h_{i}"])
+            },
+            'roi2': {
+                'x': float(form_data[f"roi2_x_{i}"]),
+                'y': float(form_data[f"roi2_y_{i}"]),
+                'w': float(form_data[f"roi2_w_{i}"]),
+                'h': float(form_data[f"roi2_h_{i}"])
+            }
         }
         i += 1
-            
+
     job["status"] = "finalizing"
     original_name = job.get("original_name", "video_sem_nome")
+    pycaps_template = job.get("pycaps_template", "default")  # Recupera o template armazenado no JOBS
     
-    background_tasks.add_task(finalize_process, job_id=job_id, jobs_dict=JOBS, clips_data=clips_data, original_base_name=original_name)
+    background_tasks.add_task(
+        finalize_process,
+        job_id=job_id,
+        jobs_dict=JOBS,
+        clips_data=clips_data,
+        original_base_name=original_name,
+        pycaps_template=pycaps_template
+    )
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
 @app.get("/status/{job_id}", response_class=JSONResponse)
 async def get_status(job_id: str):
     job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job não encontrado.")
+    if not job: raise HTTPException(status_code=404, detail="Job não encontrado.")
     return {"status": job.get("status")}
-
-# --- NOVOS ENDPOINTS PARA GERENCIAMENTO DE SAÍDA ---
 
 @app.get("/outputs", response_class=HTMLResponse)
 async def list_outputs(request: Request):
@@ -123,35 +157,47 @@ async def list_outputs(request: Request):
 @app.get("/download/{filename}")
 async def download_video(filename: str):
     path = os.path.join("outputs", filename)
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    if not os.path.exists(path): raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
     return FileResponse(path, media_type='video/mp4', filename=filename)
 
 @app.post("/delete/{filename}")
 async def delete_video(filename: str):
     path = os.path.join("outputs", filename)
-    if os.path.exists(path):
-        os.remove(path)
+    if os.path.exists(path): os.remove(path)
     return RedirectResponse(url="/outputs", status_code=303)
+
+from fastapi import BackgroundTasks
+from fastapi.responses import FileResponse, RedirectResponse
+import os, zipfile
 
 @app.get("/download-all")
 async def download_all_videos():
     outputs_dir = "outputs"
     video_files = [f for f in os.listdir(outputs_dir) if f.endswith('.mp4')]
+    
     if not video_files:
         return RedirectResponse(url="/outputs")
-
-    zip_path = os.path.join("tmp", "viralcutter_videos.zip")
+    
+    # Garante que a pasta tmp exista
+    tmp_dir = "tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    
+    zip_path = os.path.join(tmp_dir, "viralcutter_videos.zip")
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         for video in video_files:
             zipf.write(os.path.join(outputs_dir, video), arcname=video)
     
-    return FileResponse(zip_path, media_type='application/zip', filename='viralcutter_videos.zip', background=BackgroundTask(os.remove, zip_path))
+    return FileResponse(
+        zip_path,
+        media_type='application/zip',
+        filename='viralcutter_videos.zip',
+        background=BackgroundTasks().add_task(os.remove, zip_path)
+    )
+
 
 @app.post("/delete-all")
 async def delete_all_videos():
     outputs_dir = "outputs"
     for filename in os.listdir(outputs_dir):
-        if filename.endswith('.mp4'):
-            os.remove(os.path.join(outputs_dir, filename))
+        if filename.endswith('.mp4'): os.remove(os.path.join(outputs_dir, filename))
     return RedirectResponse(url="/outputs", status_code=303)

@@ -17,11 +17,11 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     libsndfile1 \
     curl \
+    wget \
+    intel-media-va-driver-non-free \
     && rm -rf /var/lib/apt/lists/*
-    
-    
-# Install a modern version of Node.js (e.g., LTS version 20)
-# Using the official NodeSource repository is recommended over apt's default
+
+# Install a modern version of Node.js (LTS v20)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
@@ -29,30 +29,30 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # First, copy only the requirements file
 COPY ./requirements.txt /app/requirements.txt
 
-# Then, install the dependencies. This layer will only be re-built if requirements.txt changes.
+# Upgrade pip and install requirements
 RUN pip3 install --no-cache-dir --upgrade pip
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+# --- Install PyCaps from GitHub ---
+RUN pip3 install --no-cache-dir git+https://github.com/francozanardi/pycaps.git 
+
+# --- Install Playwright and Chromium ---
+RUN pip3 install --no-cache-dir playwright \
+    && playwright install --with-deps chromium
+
+# Copy all application code into the container
 COPY . .
 
 # --- Install Node.js Dependencies (Leveraging Docker Cache) ---
-# First, copy only the package.json and package-lock.json files
+# Uncomment if you have package.json in repo
 # COPY ./package*.json ./
-
-# Then, install the dependencies. This layer will only be re-built if package files change.
 RUN npm install
 
-# --- Add Application Code and Build Frontend Assets ---
-# Now copy the rest of the application source code
-
-
-# Run the Tailwind CSS build command. This generates the final /static/css/output.css
-# This must be a RUN command, as it's part of the image build process.
+# Build Tailwind CSS
 RUN npm run build-css
 
 # Expose the port the FastAPI app will run on
 EXPOSE 8000
 
-# The command to run the application using Uvicorn
-# --host 0.0.0.0 makes it accessible from outside the container
+# Default command to run the app
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -62,7 +62,8 @@
                         <label for="model" class="block text-sm font-medium text-slate-300">Whisper Model</label>
                         <select id="model" name="model" class="mt-1 block w-full bg-slate-900 border-slate-600 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-sm">
                             <option value="base">Base (Fastest, ~1GB VRAM)</option>
-                            <option selected value="medium">Medium (Balanced, ~5GB VRAM)</option>
+                            <option selected value="small">Small (Balanced, ~2GB VRAM)</option>
+                            <option value="medium">Medium (Balanced, ~5GB VRAM)</option>
                             <option value="large-v3">Large v3 (Best Quality, >10GB VRAM)</option>
                         </select>
                     </div>
@@ -78,6 +79,22 @@
                     <label for="batch_size" class="block text-sm font-medium text-slate-300">Batch Size: <span x-text="batchSize" class="font-bold text-violet-400"></span></label>
                     <input id="batch_size" name="batch_size" type="range" min="1" max="5" x-model="batchSize" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
                 </div>
+                <div>
+                    <label for="pycaps_template" class="block text-sm font-medium text-slate-300">Template PyCaps --Estilo das legendas--</label>
+                    <select id="pycaps_template" name="pycaps_template" class="mt-1 block w-full bg-slate-900 border-slate-600 rounded-md shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-sm">
+                        <option value="word-focus">Word Focus</option>
+                        <option value="vibrant">Vibrant</option>
+                        <option value="retro-gaming">Retro Gaming</option>
+                        <option value="neo-minimal">Neo Minimal</option>
+                        <option value="minimalist">Minimalist</option>
+                        <option value="line-focus">Line Focus</option>
+                        <option value="hype">Hype</option>
+                        <option value="fast">Fast</option>
+                        <option value="explosive">Explosive</option>
+                        <option value="default">Default</option>
+                        <option value="classic">Classic</option>
+                    </select>
+                </div>
             </div>
 
             <button 
@@ -87,6 +104,7 @@
             >
                 Generate Clips
             </button>
+            <a href="/outputs" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Videos Processados</a>
         </form>
     </div>
 
