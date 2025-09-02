@@ -11,6 +11,14 @@ ViralCutterWeb é uma aplicação web para corte automático de vídeos virais, 
 - Geração de legendas automáticas com PyCaps
 - Interface web para ajuste dos cortes e templates de legendas
 
+## Capturas de Tela
+
+### Tela Principal
+![Tela Principal](docs/screenshot_upload.png)
+
+### Tela de Vídeos Finalizados
+![Vídeos Finalizados](docs/screenshot_finalizados.png)
+
 ## Como usar
 1. Faça upload de um vídeo ou forneça uma URL
 2. Ajuste os cortes sugeridos e escolha o template de legendas
