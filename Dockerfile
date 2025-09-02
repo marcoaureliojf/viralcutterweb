@@ -34,7 +34,7 @@ RUN pip3 install --no-cache-dir --upgrade pip
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # --- Install PyCaps from GitHub ---
-RUN pip3 install --no-cache-dir git+https://github.com/francozanardi/pycaps.git
+RUN pip3 install --no-cache-dir git+https://github.com/francozanardi/pycaps.git 
 
 # --- Install Playwright and Chromium ---
 RUN pip3 install --no-cache-dir playwright \

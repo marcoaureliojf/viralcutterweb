@@ -100,20 +100,20 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
 
         # O prompt agora inclui o offset do chunk e instrui o LLM a retornar tempos absolutos e palavras-chave
         prompt = f"""
-        "Com base NESTE TRECHO DA TRANSCRIÇÃO, atue como um especialista em cortes de vídeo virais para redes sociais, {theme_prompt}
-        Identifique todos os temas tratados e selecione segmentos que tenham entre {tempo_minimo} e {tempo_maximo} segundos com as maiores pontuações de viralidade.
-        Caso identifique mais de um tema na descrição, tente distribuir os segmentos entre os temas. Ignore introduções longas e pausas.
-        OS SEGMENTOS DEVEM FAZER SENTIDO POR SI SÓ, mesmo que vistos fora de contexto.
-        É CRÍTICO que os tempos de início e fim (start e end) sejam ABSOLUTOS em relação ao início do VÍDEO COMPLETO, considerando que este trecho da transcrição inicia aproximadamente no segundo {chunk_offset:.2f} do vídeo original.
-        Para cada segmento, forneça:
-        - O tempo de início e fim (em segundos), ABSOLUTO em relação ao início do vídeo.
-        - Um título em português, curto e atraente (máximo de 5 palavras).
-        - Uma breve descrição do porquê esse segmento é um bom corte (máximo de 15 palavras).
-        - Uma pontuação de 'viralidade' de 0 a 100.
-        - Uma lista de até 5 palavras-chave (keywords) em português que resumem o tema do segmento.
+        "Based on THIS TRANSCRIPT EXCERPT, act as an expert in viral video cuts for social media, {theme_prompt}
+        Identify all the themes covered and select segments that have between {tempo_minimo} and {tempo_maximo} seconds with the highest virality scores.
+        If you identify more than one theme in the description, try to distribute the segments among them. Ignore long introductions and pauses.
+        THE SEGMENTS MUST MAKE SENSE ON THEIR OWN, even when viewed out of context.
+        IT IS CRITICAL that the start and end times are ABSOLUTE in relation to the beginning of the FULL VIDEO, considering that this transcript begins approximately at the second {chunk_offset:.2f} of the original video.
+        For each segment, provide:
+        - The start and end times (in seconds), ABSOLUTE in relation to the beginning of the video.
+        - A short and attractive title in Portuguese (maximum 10 ... 5 words).
+        - A brief description of why this segment is a good fit (maximum 15 words).
+        - A 'virality' score from 0 to 100.
+        - A list of up to 5 keywords in Portuguese that summarize the topic of the segment.
 
-        A resposta DEVE ser um objeto JSON válido, sem nenhum texto adicional antes ou depois.
-        O formato JSON deve ser:
+        The response MUST be a valid JSON object, with no additional text before or after.
+        The JSON format should be:
         {{
           "segments": [
             {{
@@ -127,7 +127,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
           ]
         }}
 
-        Transcrição do Trecho:
+        Transcription of the excerpt:
         '{chunk_text}'"
         """
 

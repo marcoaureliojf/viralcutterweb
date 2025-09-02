@@ -20,7 +20,17 @@ def is_video_valid(file_path: str) -> bool:
     except subprocess.CalledProcessError:
         return False
 
-
+def is_valid_video(path: str) -> bool:
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", path],
+            capture_output=True, text=True, check=True
+        )
+        return bool(probe.stdout.strip())
+    except subprocess.CalledProcessError:
+        return False
+    
 def cut(viral_segments, input_video_path):
     print("Iniciando o corte dos segmentos de vídeo...")
     output_dir = "tmp"
@@ -63,7 +73,7 @@ def cut(viral_segments, input_video_path):
                 "-to", str(end_time),
                 "-i", input_video_path,
                 "-c:v", "libx264",
-                "-preset", "slow",
+                "-preset", "faster",
                 "-crf", "18",
                 "-c:a", "aac", "-b:a", "192k",
                 "-movflags", "+faststart",
@@ -72,7 +82,8 @@ def cut(viral_segments, input_video_path):
             ]
             try:
                 subprocess.run(reencode_cmd, check=True, capture_output=True, text=True)
-                print(f"Segmento {i} cortado com sucesso (reencode): {output_filename}")
+                if not is_valid_video(output_filename):
+                    raise ValueError(f"Arquivo de saída inválido: {output_filename}")
                 success = True
             except subprocess.CalledProcessError as e:
                 print(f"ERRO ao cortar segmento {i} mesmo com reencode:\nStderr: {e.stderr}")

@@ -2,6 +2,7 @@ fastapi
 uvicorn
 python-multipart
 jinja2
+dotenv
 g4f
 yt-dlp
 ffmpeg-python

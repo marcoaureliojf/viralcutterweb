@@ -1,6 +1,6 @@
 import os
 from pycaps import *
-
+        
 def process_with_pycaps(intermediate_path: str, final_output_path: str, trasncription_output_path: str, template: str):
     """
     Processa um vídeo intermediário com PyCaps para gerar/queimar legendas automaticamente.

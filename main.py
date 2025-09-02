@@ -43,7 +43,7 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
         upload_dir = "uploads"
         unique_filename = f"{uuid.uuid4()}.mp4"
         video_path = os.path.join(upload_dir, unique_filename)
-        ydl_opts = {'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', 'outtmpl': video_path, 'noplaylist': True}
+        ydl_opts = {"format": "bestvideo[height=1080][ext=mp4]+bestaudio[ext=m4a]/best[height=1080][ext=mp4]/bestvideo[height=720][ext=mp4]+bestaudio[ext=m4a]/best[height=720][ext=mp4]", 'outtmpl': video_path, 'noplaylist': True}
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([video_url])
