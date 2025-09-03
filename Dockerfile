@@ -45,7 +45,7 @@ COPY . .
 
 # --- Install Node.js Dependencies (Leveraging Docker Cache) ---
 # Uncomment if you have package.json in repo
-# COPY ./package*.json ./
+COPY ./package*.json ./
 RUN npm install
 
 # Build Tailwind CSS
