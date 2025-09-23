@@ -31,6 +31,7 @@ COPY ./requirements.txt /app/requirements.txt
 
 # Upgrade pip and install requirements
 RUN pip3 install --no-cache-dir --upgrade pip
+RUN pip3 install -U g4f[all]
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # --- Install PyCaps from GitHub ---

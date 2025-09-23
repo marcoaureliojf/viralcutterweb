@@ -13,6 +13,7 @@ services:
       #- uploads:/app/uploads
       #- outputs:/app/outputs
       #- models:/app/models
+    restart: unless-stopped  
     deploy:
       resources:
         reservations:
