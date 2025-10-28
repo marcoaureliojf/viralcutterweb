@@ -1,58 +1,140 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vídeos Finalizados</title>
+    <title>Meus Vídeos - ViralCutter Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .hover-lift {
+            transition: transform 0.2s ease-in-out;
+        }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white">
-
-    <div class="w-full max-w-3xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl shadow-lg p-8">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-4xl font-bold">Vídeos Finalizados</h1>
-            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Processar Novo Vídeo</a>
-        </div>
-
-        {% if videos %}
-        <!-- Ações Globais -->
-        <div class="bg-gray-800 p-4 rounded-lg mb-6 flex items-center space-x-4">
-            <h2 class="text-xl font-semibold flex-grow">Ações em Massa</h2>
-            <a href="/download-all" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Baixar Todos (.zip)</a>
-            <form action="/delete-all" method="post" onsubmit="return confirm('Tem certeza que deseja apagar TODOS os vídeos? Esta ação não pode ser desfeita.');">
-                <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Deletar Todos</button>
-            </form>
-        </div>
-
-        <!-- Lista de Vídeos -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for video in videos %}
-            <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-                <div class="p-4">
-                    <video controls preload="metadata" class="w-full rounded">
-                        <source src="/outputs/{{ video }}" type="video/mp4">
-                        Seu navegador não suporta a tag de vídeo.
-                    </video>
-                </div>
-                <div class="p-4 bg-gray-700">
-                    <p class="text-sm text-gray-300 truncate mb-4" title="{{ video }}">{{ video }}</p>
-                    <div class="flex justify-between items-center">
-                        <a href="/download/{{ video }}" download class="text-blue-400 hover:text-blue-300 font-semibold">Baixar</a>
-                        <form action="/delete/{{ video }}" method="post" onsubmit="return confirm('Tem certeza que deseja apagar este vídeo?');">
-                            <button type="submit" class="text-red-500 hover:text-red-400 font-semibold">Deletar</button>
-                        </form>
+<body class="bg-gray-900 text-white font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="glass-effect border-b border-gray-700">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <i class="fas fa-play-circle text-2xl text-blue-400 mr-3"></i>
+                        <h1 class="text-2xl font-bold">ViralCutter Studio</h1>
+                    </div>
+                    <nav class="flex space-x-6">
+                        <a href="/" class="text-gray-400 hover:text-white">Dashboard</a>
+                        <a href="/outputs" class="text-white border-b-2 border-blue-500">Meus Vídeos</a>
+                        <a href="#" class="text-gray-400 hover:text-white">Analytics</a>
+                    </nav>
+                    <div class="flex items-center space-x-4">
+                        <button class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-semibold">
+                            <i class="fas fa-plus mr-2"></i>Novo Projeto
+                        </button>
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">U</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-20 bg-gray-800 rounded-lg">
-            <h2 class="text-2xl font-semibold text-gray-400">Nenhum vídeo processado foi encontrado.</h2>
-            <p class="text-gray-500 mt-2">Clique no botão acima para começar um novo processamento.</p>
-        </div>
-        {% endif %}
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8">
+            <!-- Page Header -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold">Meus Vídeos Processados</h2>
+                    <p class="text-gray-400 mt-2">Gerencie e visualize todos os seus clips criados</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="/download-all" class="glass-effect hover-lift px-6 py-3 rounded-lg flex items-center">
+                        <i class="fas fa-download mr-2"></i>Baixar Todos
+                    </a>
+                    <a href="/" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Novo Vídeo
+                    </a>
+                </div>
+            </div>
+
+            <!-- Videos Grid -->
+            {% if videos %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {% for video in videos %}
+                <div class="glass-effect rounded-xl overflow-hidden hover-lift">
+                    <div class="relative">
+                        <video class="w-full aspect-video bg-gray-800" preload="metadata">
+                            <source src="/outputs/{{ video }}" type="video/mp4">
+                        </video>
+                        <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
+                            <button class="bg-white bg-opacity-20 rounded-full p-3 mx-1" onclick="this.closest('div').querySelector('video').play()">
+                                <i class="fas fa-play text-white"></i>
+                            </button>
+                            <a href="/download/{{ video }}" class="bg-white bg-opacity-20 rounded-full p-3 mx-1">
+                                <i class="fas fa-download text-white"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-semibold truncate flex-1 mr-2" title="{{ video }}">{{ video }}</h3>
+                            <div class="flex space-x-2">
+                                <a href="/download/{{ video }}" class="text-blue-400 hover:text-blue-300" title="Baixar">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form action="/delete/{{ video }}" method="post" onsubmit="return confirm('Tem certeza?')" class="inline">
+                                    <button type="submit" class="text-red-400 hover:text-red-300" title="Deletar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between text-sm text-gray-400">
+                            <span>MP4 • 1080p</span>
+                            <span>{% if loop.index %}{{ loop.index }}min{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="glass-effect rounded-xl p-12 text-center">
+                <i class="fas fa-film text-6xl text-gray-600 mb-4"></i>
+                <h3 class="text-2xl font-semibold mb-2">Nenhum vídeo processado</h3>
+                <p class="text-gray-400 mb-6">Comece criando seu primeiro projeto de clip viral</p>
+                <a href="/" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Criar Primeiro Clip
+                </a>
+            </div>
+            {% endif %}
+        </main>
     </div>
 
+    <script>
+        // Auto-play videos on hover
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoElements = document.querySelectorAll('video');
+            videoElements.forEach(video => {
+                video.addEventListener('mouseenter', function() {
+                    this.play();
+                });
+                video.addEventListener('mouseleave', function() {
+                    this.pause();
+                    this.currentTime = 0;
+                });
+            });
+        });
+    </script>
 </body>
 </html>

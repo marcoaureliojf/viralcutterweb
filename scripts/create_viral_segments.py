@@ -6,9 +6,6 @@ import os
 def get_transcript_chunks(df: pd.DataFrame, chunk_duration_sec: int, overlap_duration_sec: int):
     """
     Divide o DataFrame da transcrição em chunks de duração específica com sobreposição.
-    Retorna uma lista de dicionários, onde cada dicionário contém:
-    - 'chunk_text': A transcrição concatenada do chunk.
-    - 'start_time_offset': O tempo de início (em segundos) do chunk em relação ao vídeo completo.
     """
     chunks = []
     total_duration = df['end'].max() if not df.empty else 0
@@ -17,62 +14,48 @@ def get_transcript_chunks(df: pd.DataFrame, chunk_duration_sec: int, overlap_dur
     while current_start_time < total_duration:
         chunk_end_time = min(current_start_time + chunk_duration_sec, total_duration)
 
-        # Seleciona as linhas do DataFrame que caem dentro do chunk atual
-        # Adicionamos uma pequena margem para garantir que a última palavra do chunk esteja incluída
         chunk_df = df[(df['start'] >= current_start_time - 0.1) & (df['end'] <= chunk_end_time + 0.1)].copy()
 
         if not chunk_df.empty:
             chunk_text = " ".join(chunk_df['text'].astype(str))
             
-            # Garantir que o offset do chunk seja o 'start' real do primeiro item
-            # ou o 'current_start_time' se for mais preciso para o propósito de contexto.
-            # Aqui, usaremos o 'current_start_time' como referência para o LLM.
             chunks.append({
                 "chunk_text": chunk_text,
                 "start_time_offset": current_start_time
             })
-        else:
-            # Se não houver texto no chunk, mas ainda houver duração total,
-            # avançamos para evitar loops infinitos em espaços vazios.
-            pass
-
-        # Move o ponteiro para o próximo chunk, considerando a sobreposição
+        
         current_start_time += (chunk_duration_sec - overlap_duration_sec)
         
-        # Garante que não haja sobreposição negativa caso o chunk_duration_sec seja menor que overlap_duration_sec
         if current_start_time < 0: 
             current_start_time = 0
 
     return chunks
 
 
-def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
+def create(input_tsv_path: str, num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     """
-    Analyzes the transcription and generates a list of potential viral segments,
-    using chunking with overlap for long videos. It also extracts keywords for each
-    segment and saves them to separate .tsv files corresponding to the video segments.
+    Analyzes the transcription and generates a list of potential viral segments.
     """
     print("Analisando transcrição para encontrar segmentos virais...")
 
-    # Define the output paths
     output_path = os.path.join('tmp', 'viral_segments.txt')
-    keywords_output_path = os.path.join('tmp', 'viral_segments_keywords.txt')
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # Read the transcription data
+    # Read the transcription data from the explicit path
     try:
-        df = pd.read_csv(os.path.join('tmp', 'input_video.tsv'), sep='\t')
+        df = pd.read_csv(input_tsv_path, sep='\t')
     except FileNotFoundError:
-        print("ERRO: Arquivo 'input_video.tsv' não encontrado. A transcrição falhou.")
+        print(f"ERRO: Arquivo de transcrição não encontrado: {input_tsv_path}.")
         raise
 
     if df.empty:
         print("A transcrição está vazia. Nenhum segmento pode ser gerado.")
         return {"segments": []}
     
-    df['start'] = df['start'] / 1000
-    df['end'] = df['end'] / 1000
-    print("DEBUG: Colunas 'start' e 'end' convertidas para segundos.")
+    # Adiciona a verificação de tipo e conversão, se necessário.
+    if df['start'].dtype != float or df['end'].dtype != float:
+        df['start'] = df['start'] / 1000
+        df['end'] = df['end'] / 1000
+        print("DEBUG: Colunas 'start' e 'end' convertidas para segundos.")
 
     # --- Configuração de Chunking ---
     CHUNK_DURATION_SEC = 600  # 10 minutos por chunk
@@ -98,7 +81,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         else:
             theme_prompt = f"com base nos seguintes temas: {themes}."
 
-        # O prompt agora inclui o offset do chunk e instrui o LLM a retornar tempos absolutos e palavras-chave
+        # O prompt agora inclui o offset do chunk e instrui o LLM a retornar tempos absolutos
         prompt = f"""
         "Based on THIS TRANSCRIPT EXCERPT, act as an expert in viral video cuts for social media, {theme_prompt}
         Identify all the themes covered and select segments that have between {tempo_minimo} and {tempo_maximo} seconds with the highest virality scores.
@@ -107,7 +90,7 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
         IT IS CRITICAL that the start and end times are ABSOLUTE in relation to the beginning of the FULL VIDEO, considering that this transcript begins approximately at the second {chunk_offset:.2f} of the original video.
         For each segment, provide:
         - The start and end times (in seconds), ABSOLUTE in relation to the beginning of the video.
-        - A short and attractive title in Portuguese (maximum 10 ... 5 words).
+        - A short and attractive title in Portuguese (maximum 5 words).
         - A brief description of why this segment is a good fit (maximum 15 words).
         - A 'virality' score from 0 to 100.
         - A list of up to 5 keywords in Portuguese that summarize the topic of the segment.
@@ -140,7 +123,6 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
             cleaned_response = response.strip().replace('```json', '').replace('```', '')
             chunk_viral_segments = json.loads(cleaned_response)
             
-            # Adicionar os segmentos do chunk à lista geral
             for segment in chunk_viral_segments.get('segments', []):
                 # Basic validation: ensure times are within reasonable bounds
                 if segment.get('start', -1) >= 0 and segment.get('end', 0) > segment.get('start', -1):
@@ -150,18 +132,15 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
             print(f"ERRO: Falha ao decodificar JSON do chunk {i+1}. Resposta inválida: {cleaned_response}. Erro: {e}")
         except Exception as e:
             print(f"ERRO: Falha ao gerar ou processar segmentos virais para o chunk {i+1}. {e}")
-            # Decide if you want to continue or stop
 
     # --- Pós-processamento: Remover Duplicatas e Selecionar os Melhores ---
     print("Agregando e filtrando segmentos de todos os chunks...")
 
     unique_segments = {}
     for segment in all_potential_segments:
-        # Arredondar tempos para evitar problemas de float e considerá-los "iguais" se estiverem muito próximos
         # Usar uma tupla (start_rounded, end_rounded, title) como chave para identificar "duplicatas"
         key = (round(segment.get('start', 0), 1), round(segment.get('end', 0), 1), segment.get('title', '').lower())
         
-        # Se um segmento com a mesma chave já existe, mantenha o de maior score
         if key not in unique_segments or segment.get('score', 0) > unique_segments[key].get('score', 0):
             unique_segments[key] = segment
 
@@ -170,7 +149,6 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     # Ordenar por score de viralidade (descendente) e pegar os 'num_segments' melhores
     final_segments.sort(key=lambda x: x.get('score', 0), reverse=True)
     
-    # Garante que pegue no máximo o número de segmentos disponíveis.
     final_segments_to_save = {"segments": final_segments[:max(0, num_segments)]}
 
     # Save the segments to the specified file
@@ -184,13 +162,16 @@ def create(num_segments, viral_mode, themes, tempo_minimo, tempo_maximo):
     for idx, segment in enumerate(final_segments_to_save.get('segments', [])):
         start_time = segment.get('start', 0)
         end_time = segment.get('end', 0)
-        transcription_output_path = os.path.join('tmp', f"output{idx:03d}.tsv")
+        # Transcrição nomeada de acordo com o padrão de corte: output000.tsv, output001.tsv, etc.
+        transcription_output_path = os.path.join('tmp', f"output{idx:03d}.tsv") 
         with open(transcription_output_path, 'w', encoding='utf-8') as f:
-            f.write("start\tend\ttext\n")  # Cabeçalho do arquivo TSV
-            segment_transcription = df[(df['start'] >= start_time) & (df['end'] <= end_time)]
+            f.write("start\tend\ttext\n") 
+            # Garante que a transcrição do segmento comece em 0 para o PyCaps
+            segment_transcription = df[(df['start'] >= start_time) & (df['end'] <= end_time)].copy()
+            segment_transcription['start'] = segment_transcription['start'] - start_time
+            segment_transcription['end'] = segment_transcription['end'] - start_time
             for _, row in segment_transcription.iterrows():
                 f.write(f"{row['start']:.3f}\t{row['end']:.3f}\t{row['text']}\n")
         print(f"Transcrição do segmento {idx} salva em {transcription_output_path}")
-    # --- FIM DO NOVO BLOCO ---
 
     return final_segments_to_save

@@ -16,7 +16,7 @@
     </style>
 </head>
 <body class="bg-slate-900 text-slate-300 font-sans p-4">
-    <div class="w-full max-w-3xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl shadow-lg p-8"> <!-- Aumentei um pouco o max-width para acomodar 3 colunas melhor -->
+    <div class="w-full max-w-3xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl shadow-lg p-8">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-slate-100">Visual Framing Tool</h1>
             <p class="text-slate-400 mt-2">Arraste e redimensione as caixas para selecionar as áreas de interesse em cada clipe.</p>
@@ -28,8 +28,16 @@
                 <div class="space-y-4 bg-slate-800 p-4 rounded-lg border border-slate-700"
                      x-data="cropper()" x-init="init($refs.container)">
                     
-                    <!-- *** ALTERAÇÃO 1: Exibe o título da IA aqui *** -->
                     <h3 class="font-bold text-lg text-center text-blue-400 truncate" title="{{ clip.title }}">{{ clip.title }}</h3>
+
+                    <!-- Nova checkbox para redimensionamento livre -->
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" id="free_resize_{{ loop.index0 }}" 
+                               x-model="freeResize" class="mr-2 h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500">
+                        <label for="free_resize_{{ loop.index0 }}" class="text-sm text-slate-300">
+                            Redimensionamento livre
+                        </label>
+                    </div>
 
                     <div class="relative w-full aspect-video bg-black rounded-md overflow-hidden" 
                          @mousemove.prevent="handleMouseMove" @mouseup.prevent="stopAction" @mouseleave.prevent="stopAction"
@@ -59,9 +67,9 @@
 
                     <!-- Hidden inputs -->
                     <input type="hidden" name="clip_path_{{ loop.index0 }}" value="{{ clip.path }}">
-                    
-                    <!-- *** ALTERAÇÃO 2: Adiciona o título como um campo oculto para ser enviado *** -->
                     <input type="hidden" name="clip_title_{{ loop.index0 }}" value="{{ clip.title }}">
+                    <!-- Campo oculto para armazenar o estado da checkbox -->
+                    <input type="hidden" :name="'free_resize_{{ loop.index0 }}'" :value="freeResize">
 
                     <input type="hidden" :name="'roi1_x_{{ loop.index0 }}'" :value="roi1.x">
                     <input type="hidden" :name="'roi1_y_{{ loop.index0 }}'" :value="roi1.y">
@@ -83,8 +91,9 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('cropper', () => ({
-        roi1: { x: 10, y: 15, w: 40, h: 50, color: 'yellow' }, // Valores iniciais ajustados
-        roi2: { x: 50, y: 35, w: 40, h: 50, color: 'red' }, // Valores iniciais ajustados
+        roi1: { x: 10, y: 15, w: 40, h: 50, color: 'yellow' },
+        roi2: { x: 50, y: 35, w: 40, h: 50, color: 'red' },
+        freeResize: false, // Estado da checkbox
         containerRect: null,
         action: { type: null, roi: null, handle: null, startX: 0, startY: 0, startRoi: null },
         
@@ -120,31 +129,57 @@ document.addEventListener('alpine:init', () => {
             } else if (this.action.type === 'resize') {
                 const currentRoi = this[this.action.roi];
                 const startRoi = this.action.startRoi;
-                const roiRatio = 9 / 8; // proporção desejada
-                const containerRatio = this.containerRect.width / this.containerRect.height;
+                
+                // Se freeResize estiver ativado, redimensiona livremente
+                if (this.freeResize) {
+                    if (this.action.handle.includes('e')) {
+                        currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
+                    }
+                    if (this.action.handle.includes('w')) {
+                        const newWidth = startRoi.w - dx;
+                        if (newWidth > 5 && startRoi.x + dx >= 0) {
+                            currentRoi.w = newWidth;
+                            currentRoi.x = startRoi.x + dx;
+                        }
+                    }
+                    if (this.action.handle.includes('s')) {
+                        currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
+                    }
+                    if (this.action.handle.includes('n')) {
+                        const newHeight = startRoi.h - dy;
+                        if (newHeight > 5 && startRoi.y + dy >= 0) {
+                            currentRoi.h = newHeight;
+                            currentRoi.y = startRoi.y + dy;
+                        }
+                    }
+                } else {
+                    // Comportamento original com proporção fixa
+                    const roiRatio = 9 / 8; // proporção desejada
+                    const containerRatio = this.containerRect.width / this.containerRect.height;
 
-                if (this.action.handle.includes('e')) {
-                    currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
-                    currentRoi.h = (currentRoi.w / roiRatio) * containerRatio;
-                }
-                if (this.action.handle.includes('w')) {
-                    const newWidth = startRoi.w - dx;
-                    if (newWidth > 5 && startRoi.x + dx >= 0) {
-                        currentRoi.w = newWidth;
-                        currentRoi.x = startRoi.x + dx;
+                    if (this.action.handle.includes('e')) {
+                        currentRoi.w = Math.max(5, Math.min(100 - startRoi.x, startRoi.w + dx));
                         currentRoi.h = (currentRoi.w / roiRatio) * containerRatio;
                     }
-                }
-                if (this.action.handle.includes('s')) {
-                    currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
-                    currentRoi.w = (currentRoi.h * roiRatio) / containerRatio;
-                }
-                if (this.action.handle.includes('n')) {
-                    const newHeight = startRoi.h - dy;
-                    if (newHeight > 5 && startRoi.y + dy >= 0) {
-                        currentRoi.h = newHeight;
-                        currentRoi.y = startRoi.y + dy;
+                    if (this.action.handle.includes('w')) {
+                        const newWidth = startRoi.w - dx;
+                        if (newWidth > 5 && startRoi.x + dx >= 0) {
+                            currentRoi.w = newWidth;
+                            currentRoi.x = startRoi.x + dx;
+                            currentRoi.h = (currentRoi.w / roiRatio) * containerRatio;
+                        }
+                    }
+                    if (this.action.handle.includes('s')) {
+                        currentRoi.h = Math.max(5, Math.min(100 - startRoi.y, startRoi.h + dy));
                         currentRoi.w = (currentRoi.h * roiRatio) / containerRatio;
+                    }
+                    if (this.action.handle.includes('n')) {
+                        const newHeight = startRoi.h - dy;
+                        if (newHeight > 5 && startRoi.y + dy >= 0) {
+                            currentRoi.h = newHeight;
+                            currentRoi.y = startRoi.y + dy;
+                            currentRoi.w = (currentRoi.h * roiRatio) / containerRatio;
+                        }
                     }
                 }
             }

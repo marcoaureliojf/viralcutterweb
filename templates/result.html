@@ -1,58 +1,97 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processando Vídeo...</title>
+    <title>Processando - ViralCutter Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .spinner {
-            border-top-color: #3498db;
+            border-top-color: #3b82f6;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            animation: progress 2s ease-in-out infinite;
+        }
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
-    <div class="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
-        <div class="spinner w-16 h-16 border-4 border-gray-600 rounded-full mx-auto mb-4"></div>
-        <h1 class="text-3xl font-bold mb-2">Processando seu vídeo...</h1>
-        <p class="text-gray-400">Isso pode levar alguns minutos. Por favor, não feche esta aba.</p>
-        <p class="text-gray-500 text-sm mt-4">A página será atualizada automaticamente quando o processo for concluído.</p>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+    <div class="glass-effect rounded-2xl p-8 max-w-md w-full mx-4">
+        <div class="text-center">
+            <!-- Animated Spinner -->
+            <div class="spinner w-16 h-16 border-4 border-gray-600 rounded-full mx-auto mb-6"></div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-700 rounded-full h-2 mb-6 overflow-hidden">
+                <div class="progress-bar h-2 rounded-full"></div>
+            </div>
+            
+            <!-- Content -->
+            <i class="fas fa-robot text-4xl text-blue-400 mb-4"></i>
+            <h1 class="text-2xl font-bold mb-2">Processando seu vídeo</h1>
+            <p class="text-gray-400 mb-4">A IA está analisando e criando clips virais...</p>
+            
+            <!-- Steps -->
+            <div class="space-y-3 text-left mb-6">
+                <div class="flex items-center text-green-400">
+                    <i class="fas fa-check-circle mr-3"></i>
+                    <span>Upload concluído</span>
+                </div>
+                <div class="flex items-center text-blue-400">
+                    <i class="fas fa-sync-alt mr-3 animate-spin"></i>
+                    <span>Analisando conteúdo</span>
+                </div>
+                <div class="flex items-center text-gray-400">
+                    <i class="far fa-clock mr-3"></i>
+                    <span>Gerando clips</span>
+                </div>
+                <div class="flex items-center text-gray-400">
+                    <i class="far fa-clock mr-3"></i>
+                    <span>Aplicando efeitos</span>
+                </div>
+            </div>
+            
+            <p class="text-sm text-gray-500">Isso pode levar alguns minutos. A página será atualizada automaticamente.</p>
+        </div>
     </div>
 
-    <!-- SCRIPT DE ATUALIZAÇÃO AUTOMÁTICA -->
     <script>
         const jobId = "{{ job_id }}";
 
         async function checkJobStatus() {
             try {
                 const response = await fetch(`/status/${jobId}`);
-                if (!response.ok) {
-                    console.error("Erro ao buscar status do job. Parando as verificações.");
-                    clearInterval(intervalId);
-                    return;
-                }
+                if (!response.ok) throw new Error('Erro na requisição');
+                
                 const data = await response.json();
                 const status = data.status;
 
-                // --- LÓGICA DE REDIRECIONAMENTO ATUALIZADA ---
                 if (status === "complete") {
-                    // Se o trabalho estiver completo, vá para a página de resultados
                     window.location.href = '/outputs';
                 } else if (status !== "processing" && status !== "finalizing") {
-                    // Se estiver em qualquer outro estado finalizado (como pending_adjustment), recarregue a página atual
                     window.location.reload();
                 }
             } catch (error) {
-                console.error("Falha na requisição de status:", error);
-                clearInterval(intervalId);
+                console.error("Erro:", error);
             }
         }
 
-        const intervalId = setInterval(checkJobStatus, 5000);
+        setInterval(checkJobStatus, 5000);
     </script>
 </body>
 </html>

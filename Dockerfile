@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Install system dependencies, including git, ffmpeg, curl (for Node.js setup)
 RUN apt-get update && apt-get install -y \
+    libegl1 \
     python3-pip \
     python3-dev \
     git \

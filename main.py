@@ -1,20 +1,25 @@
 import os
-import shutil
 import uuid
 import yt_dlp
 import zipfile
+import shutil
 from fastapi import FastAPI, File, UploadFile, Request, BackgroundTasks, Form, HTTPException, Path
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 
+# Importa as funções de processamento
 from processing import initial_process, finalize_process
+# Importa as funções auxiliares (estatísticas e I/O)
+from scripts.utils import get_videos_processed, get_time_saved, get_success_clips
 
 # --- CONFIGURAÇÃO DA APLICAÇÃO ---
 app = FastAPI()
 
+# Garante que os diretórios existam
 os.makedirs("uploads", exist_ok=True); os.makedirs("outputs", exist_ok=True); os.makedirs("tmp", exist_ok=True)
+os.makedirs("burned_sub", exist_ok=True); os.makedirs("subs_ass", exist_ok=True) # Diretórios PyCaps/Finalização
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/clips", StaticFiles(directory="tmp"), name="clips")
@@ -23,11 +28,17 @@ app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 templates = Jinja2Templates(directory="templates")
 JOBS = {}
 
+
 # --- ENDPOINTS PRINCIPAIS DA APLICAÇÃO ---
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "videos_processed": get_videos_processed(),
+        "time_saved": get_time_saved(),
+        "success_clips": get_success_clips()
+    })
 
 @app.post("/upload/", response_class=HTMLResponse)
 async def upload_video(background_tasks: BackgroundTasks, request: Request, model: str = Form(...), compute_type: str = Form(...), batch_size: int = Form(...), pycaps_template: str = Form(...), video: UploadFile = File(None), video_url: str = Form(None)):
@@ -36,14 +47,20 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
     
     video_path = ""
     if video and video.filename:
+        # Usa o nome original do arquivo
         video_path = os.path.join("uploads", video.filename)
         with open(video_path, "wb") as buffer:
             shutil.copyfileobj(video.file, buffer)
     elif video_url:
         upload_dir = "uploads"
+        # Gera um nome de arquivo único para URLs
         unique_filename = f"{uuid.uuid4()}.mp4"
         video_path = os.path.join(upload_dir, unique_filename)
-        ydl_opts = {"format": "bestvideo[height=1080][ext=mp4]+bestaudio[ext=m4a]/best[height=1080][ext=mp4]/bestvideo[height=720][ext=mp4]+bestaudio[ext=m4a]/best[height=720][ext=mp4]", 'outtmpl': video_path, 'noplaylist': True}
+        ydl_opts = {
+            "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best", 
+            'outtmpl': video_path, 
+            'noplaylist': True
+        }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([video_url])
@@ -53,13 +70,19 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
     if not video_path or not os.path.exists(video_path):
         raise HTTPException(status_code=500, detail="Falha ao salvar ou baixar o vídeo.")
     
+    # Usa o nome base do arquivo (sem extensão) para a saída final
     original_base_name = os.path.splitext(os.path.basename(video_path))[0]
     job_id = str(uuid.uuid4())
+    
+    # Caminho explícito para a transcrição principal
+    main_transcript_path = os.path.join('tmp', f"{job_id}_main.tsv")
+
     JOBS[job_id] = {
         "status": "processing",
         "clips": [],
         "original_name": original_base_name,
-        "pycaps_template": pycaps_template  # Armazena o template no dicionário JOBS
+        "pycaps_template": pycaps_template,
+        "main_transcript_path": main_transcript_path # Armazena o caminho TSV
     }
     
     background_tasks.add_task(
@@ -70,7 +93,8 @@ async def upload_video(background_tasks: BackgroundTasks, request: Request, mode
         model=model,
         compute_type=compute_type,
         pycaps_template=pycaps_template,
-        batch_size=batch_size
+        batch_size=batch_size,
+        main_transcript_path=main_transcript_path # Passa o caminho explícito
     )
     return RedirectResponse(url=f"/adjust/{job_id}", status_code=303)
 
@@ -85,8 +109,6 @@ async def adjust_page(request: Request, job_id: str = Path(...)):
     if job["status"] == "complete":
         return RedirectResponse(url="/outputs", status_code=303)
 
-    # --- MUDANÇA CRÍTICA AQUI ---
-    # Prepara os dados para o template, garantindo que o nome do arquivo e a URL também sejam passados.
     clips_for_template = []
     for clip_data in job.get("clips", []):
         path = clip_data["path"]
@@ -113,6 +135,8 @@ async def finalize_job(request: Request, background_tasks: BackgroundTasks, job_
         title = form_data.get(f"clip_title_{i}", "Título não encontrado")
         clips_data[path] = {
             'title': title,
+            # NOTA: O nome do TSV do segmento é agora derivado do nome base do clipe de vídeo.
+            'segment_tsv_path': os.path.join('tmp', f"{os.path.splitext(os.path.basename(path))[0]}.tsv"),
             'roi1': {
                 'x': float(form_data[f"roi1_x_{i}"]),
                 'y': float(form_data[f"roi1_y_{i}"]),
@@ -130,7 +154,7 @@ async def finalize_job(request: Request, background_tasks: BackgroundTasks, job_
 
     job["status"] = "finalizing"
     original_name = job.get("original_name", "video_sem_nome")
-    pycaps_template = job.get("pycaps_template", "default")  # Recupera o template armazenado no JOBS
+    pycaps_template = job.get("pycaps_template", "default")
     
     background_tasks.add_task(
         finalize_process,
@@ -166,19 +190,16 @@ async def delete_video(filename: str):
     if os.path.exists(path): os.remove(path)
     return RedirectResponse(url="/outputs", status_code=303)
 
-from fastapi import BackgroundTasks
 from fastapi.responses import FileResponse, RedirectResponse
-import os, zipfile
 
 @app.get("/download-all")
-async def download_all_videos():
+async def download_all_videos(background_tasks: BackgroundTasks):
     outputs_dir = "outputs"
     video_files = [f for f in os.listdir(outputs_dir) if f.endswith('.mp4')]
     
     if not video_files:
         return RedirectResponse(url="/outputs")
     
-    # Garante que a pasta tmp exista
     tmp_dir = "tmp"
     os.makedirs(tmp_dir, exist_ok=True)
     
@@ -191,9 +212,8 @@ async def download_all_videos():
         zip_path,
         media_type='application/zip',
         filename='viralcutter_videos.zip',
-        background=BackgroundTasks().add_task(os.remove, zip_path)
+        background=background_tasks.add_task(os.remove, zip_path)
     )
-
 
 @app.post("/delete-all")
 async def delete_all_videos():
