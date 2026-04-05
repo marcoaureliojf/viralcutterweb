@@ -1,4 +1,5 @@
 import os
+import shutil
 from pycaps import *
         
 def process_with_pycaps(intermediate_path: str, final_output_path: str, template: str):

@@ -12,14 +12,36 @@
 /node_modules/
 /papo-de-preta/
 
-# 2. Arquivos de Ambiente
+# 2. Sistema de Projetos
+# Diretório de projetos contém uploads, outputs e arquivos temporários por projeto
+/projects/*/uploads/
+/projects/*/outputs/
+/projects/*/tmp/
+/projects/*/burned_sub/
+/projects/*/subs_ass/
+# Mantém a estrutura de diretórios de projetos, mas ignora o conteúdo
+!projects/.gitkeep
+
+# 3. Banco de Dados
+# Arquivos de banco de dados SQLite (contém dados locais)
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# 4. Antigravity Brain (Artifacts do Assistente)
+# Diretório usado pelo assistente de IA para armazenar artefatos
+.gemini/
+
+# 5. Arquivos de Ambiente
 # NUNCA cometa arquivos .env! Eles contêm chaves de API, senhas e outros segredos.
 # É uma boa prática ter um .env.example com a estrutura, mas sem os valores.
 *.env
 .env*
 !.env.example
 
-# 3. Ambientes Virtuais do Python
+# 6. Ambientes Virtuais do Python
 # A pasta do ambiente virtual é específica da máquina e pode ser muito grande.
 # As dependências devem ser gerenciadas pelo requirements.txt.
 venv/
@@ -29,7 +51,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# 4. Bytecode e Cache do Python
+# 7. Bytecode e Cache do Python
 # O Python gera esses arquivos automaticamente para acelerar a execução.
 __pycache__/
 *.pyc
@@ -38,14 +60,14 @@ __pycache__/
 *.pyz
 *.pyw
 
-# 5. Configuração de IDE / Editor de Código
+# 8. Configuração de IDE / Editor de Código
 # As configurações do editor são pessoais e não devem ser compartilhadas no repositório.
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# 6. Arquivos de Teste e Cobertura
+# 9. Arquivos de Teste e Cobertura
 # Relatórios e caches gerados durante os testes.
 .pytest_cache/
 .coverage
@@ -54,19 +76,19 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# 7. Artefatos de Build e Distribuição
+# 10. Artefatos de Build e Distribuição
 # Gerados ao empacotar a aplicação Python.
 build/
 dist/
 *.egg-info/
 *.egg
 
-# 8. Arquivos de Log
+# 11. Arquivos de Log
 # Logs gerados durante a execução da aplicação.
 *.log
 logs/
 
-# 9. Arquivos específicos do Sistema Operacional
+# 12. Arquivos específicos do Sistema Operacional
 .DS_Store
 Thumbs.db
 desktop.ini

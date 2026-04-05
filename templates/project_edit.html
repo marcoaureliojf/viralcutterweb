@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Projeto - ViralCutter Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hover-lift {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+        }
+
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: white;
+        }
+
+        .tab-inactive {
+            color: #9ca3af;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="glass-effect border-b border-gray-700">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <i class="fas fa-play-circle text-2xl text-blue-400 mr-3"></i>
+                        <h1 class="text-2xl font-bold">ViralCutter Studio</h1>
+                    </div>
+                    <nav class="flex space-x-6">
+                        <a href="/" class="text-gray-400 hover:text-white">Dashboard</a>
+                        <a href="/projects" class="text-white border-b-2 border-blue-500">Projetos</a>
+                        <a href="/outputs" class="text-gray-400 hover:text-white">Meus Vídeos</a>
+                    </nav>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">U</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8" x-data="projectEditManager()">
+            <!-- Project Header -->
+            <div class="mb-8">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <a href="/projects" class="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
+                            <i class="fas fa-arrow-left mr-1"></i> Voltar para Projetos
+                        </a>
+                        <h2 class="text-3xl font-bold">{{ project.name }}</h2>
+                        {% if project.description %}
+                        <p class="text-gray-400 mt-2">{{ project.description }}</p>
+                        {% endif %}
+                    </div>
+                    <a href="/?project_id={{ project.id }}"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Novo Upload
+                    </a>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="glass-effect rounded-lg p-4">
+                        <i class="fas fa-video text-blue-400 mb-2"></i>
+                        <p class="text-gray-400 text-sm">Total de Vídeos</p>
+                        <p class="text-2xl font-bold">{{ stats.total_videos if stats else 0 }}</p>
+                    </div>
+                    <div class="glass-effect rounded-lg p-4">
+                        <i class="fas fa-film text-purple-400 mb-2"></i>
+                        <p class="text-gray-400 text-sm">Total de Clips</p>
+                        <p class="text-2xl font-bold">{{ stats.total_clips if stats else 0 }}</p>
+                    </div>
+                    <div class="glass-effect rounded-lg p-4">
+                        <i class="fas fa-check-circle text-green-400 mb-2"></i>
+                        <p class="text-gray-400 text-sm">Completos</p>
+                        <p class="text-2xl font-bold">{{ stats.completed_videos if stats else 0 }}</p>
+                    </div>
+                    <div class="glass-effect rounded-lg p-4">
+                        <i class="fas fa-spinner text-yellow-400 mb-2"></i>
+                        <p class="text-gray-400 text-sm">Processando</p>
+                        <p class="text-2xl font-bold">{{ stats.processing_videos if stats else 0 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="mb-6">
+                <div class="flex space-x-6 border-b border-gray-700">
+                    <button @click="activeTab = 'uploads'"
+                        :class="activeTab === 'uploads' ? 'tab-active' : 'tab-inactive'"
+                        class="px-4 py-2 font-semibold">
+                        <i class="fas fa-upload mr-2"></i>Vídeos de Upload
+                    </button>
+                    <button @click="activeTab = 'outputs'"
+                        :class="activeTab === 'outputs' ? 'tab-active' : 'tab-inactive'"
+                        class="px-4 py-2 font-semibold">
+                        <i class="fas fa-film mr-2"></i>Vídeos de Output
+                    </button>
+                </div>
+            </div>
+
+            <!-- Uploads Tab -->
+            <div x-show="activeTab === 'uploads'" x-cloak>
+                {% if videos and videos|length > 0 %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for video in videos %}
+                    <div class="glass-effect rounded-xl p-4 hover-lift">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-semibold truncate flex-1" title="{{ video.original_filename }}">
+                                {{ video.original_filename }}
+                            </h3>
+                            <span class="ml-2 px-2 py-1 rounded text-xs
+                                {% if video.status == 'complete' %}bg-green-600
+                                {% elif video.status == 'processing' or video.status == 'finalizing' %}bg-yellow-600
+                                {% elif video.status == 'error' %}bg-red-600
+                                {% else %}bg-blue-600{% endif %}">
+                                {{ video.status }}
+                            </span>
+                        </div>
+
+                        <div class="text-sm text-gray-400 mb-4">
+                            <p><i class="fas fa-calendar mr-1"></i> {{ video.created_at[:10] if video.created_at else
+                                'N/A' }}</p>
+                            <p><i class="fas fa-cog mr-1"></i> {{ video.settings.model if video.settings else 'N/A' }}
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col space-y-2">
+                            {% if video.transcript_exists %}
+                            <button @click="viewTranscript('{{ video.id }}')"
+                                class="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded-lg text-sm">
+                                <i class="fas fa-file-alt mr-1"></i>Ver Transcrição
+                            </button>
+                            {% endif %}
+
+                            {% if video.status == 'pending_adjustment' %}
+                            <a href="/adjust/{{ video.id }}"
+                                class="w-full bg-green-600 hover:bg-green-700 py-2 rounded-lg text-sm flex items-center justify-center mb-2">
+                                <i class="fas fa-sliders-h mr-1"></i>Continuar Ajuste
+                            </a>
+                            {% endif %}
+
+                            {% if video.status in ['complete', 'pending_adjustment', 'error'] %}
+                            <button @click="reprocessVideo('{{ video.id }}')"
+                                class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm">
+                                <i class="fas fa-redo mr-1"></i>Reprocessar
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="glass-effect rounded-xl p-12 text-center">
+                    <i class="fas fa-video text-6xl text-gray-600 mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-2">Nenhum vídeo enviado</h3>
+                    <p class="text-gray-400 mb-6">Faça upload do primeiro vídeo para este projeto</p>
+                    <a href="/?project_id={{ project.id }}"
+                        class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold inline-flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Fazer Upload
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Outputs Tab -->
+            <div x-show="activeTab === 'outputs'" x-cloak>
+                {% if clips and clips|length > 0 %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {% for clip in clips %}
+                    {% if clip.output_exists %}
+                    <div class="glass-effect rounded-xl overflow-hidden hover-lift">
+                        <div class="relative">
+                            <video class="w-full aspect-video bg-gray-800" preload="metadata">
+                                <source
+                                    src="/media/projects/{{ project.id }}/outputs/{{ clip.output_path.split('/')[-1] }}"
+                                    type="video/mp4">
+                            </video>
+                            <div
+                                class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
+                                <button class="bg-white bg-opacity-20 rounded-full p-3 mx-1"
+                                    onclick="this.closest('div').previousElementSibling.play()">
+                                    <i class="fas fa-play text-white"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-4">
+                            <h3 class="font-semibold truncate mb-2" title="{{ clip.title }}">{{ clip.title }}</h3>
+                            <div class="flex justify-between text-sm text-gray-400 mb-3">
+                                <span><i class="fas fa-clock mr-1"></i>{{ "%.1f"|format(clip.duration) if clip.duration
+                                    else 'N/A' }}s</span>
+                                <span>{{ clip.created_at[:10] if clip.created_at else 'N/A' }}</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="/download/{{ clip.output_path.split('/')[-1] }}"
+                                    class="flex-1 text-center bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-sm">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form action="/delete/{{ clip.output_path.split('/')[-1] }}" method="post"
+                                    onsubmit="return confirm('Tem certeza?')" class="flex-1">
+                                    <button type="submit"
+                                        class="w-full bg-red-600 hover:bg-red-700 py-2 rounded-lg text-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="glass-effect rounded-xl p-12 text-center">
+                    <i class="fas fa-film text-6xl text-gray-600 mb-4"></i>
+                    <h3 class="text-2xl font-semibold mb-2">Nenhum clip processado</h3>
+                    <p class="text-gray-400 mb-6">Processe vídeos para gerar clips</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Logs Modal -->
+            <div x-show="showLogsModal" x-cloak
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+                @click.self="closeLogsModal">
+                <div
+                    class="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-4xl w-full mx-4 h-[80vh] flex flex-col shadow-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-green-400 font-mono">
+                            <i class="fas fa-terminal mr-2"></i>Terminal de Processamento
+                        </h3>
+                        <button @click="closeLogsModal" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Terminal Output -->
+                    <div id="logs-container"
+                        class="flex-1 bg-black rounded-lg p-4 overflow-y-auto font-mono text-sm text-gray-300 mb-4 border border-gray-800">
+                        <template x-for="(log, index) in logs" :key="index">
+                            <div class="mb-1 break-words">
+                                <span class="text-green-500 mr-2">$</span>
+                                <span x-text="log"></span>
+                            </div>
+                        </template>
+                        <div x-show="processingStatus === 'processing'" class="animate-pulse mt-2">
+                            <span class="inline-block w-2 h-4 bg-green-500"></span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end space-x-3">
+                        <button @click="closeLogsModal"
+                            class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                            Fechar
+                        </button>
+                        <a x-show="processingStatus === 'pending_adjustment'" :href="'/adjust/' + activeJobId"
+                            class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold flex items-center animate-bounce">
+                            Ir para Ajustes <i class="fas fa-arrow-right ml-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transcript Modal -->
+            <div x-show="showTranscriptModal" x-cloak
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                @click.self="showTranscriptModal = false">
+                <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-2xl font-bold">Transcrição</h3>
+                        <button @click="showTranscriptModal = false" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <input type="text" x-model="transcriptSearch" placeholder="Buscar na transcrição..."
+                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div class="overflow-y-auto flex-1">
+                        <template x-if="transcriptLoading">
+                            <div class="text-center py-8">
+                                <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                                <p class="mt-4 text-gray-400">Carregando transcrição...</p>
+                            </div>
+                        </template>
+
+                        <template x-if="!transcriptLoading && transcript.length > 0">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-700 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Início</th>
+                                        <th class="px-4 py-2 text-left">Fim</th>
+                                        <th class="px-4 py-2 text-left">Texto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(item, index) in filteredTranscript" :key="index">
+                                        <tr class="border-b border-gray-700 hover:bg-gray-700">
+                                            <td class="px-4 py-2" x-text="item.start"></td>
+                                            <td class="px-4 py-2" x-text="item.end"></td>
+                                            <td class="px-4 py-2" x-text="item.text"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+
+                        <template x-if="!transcriptLoading && transcript.length === 0">
+                            <div class="text-center py-8 text-gray-400">
+                                <p>Nenhuma transcrição disponível</p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function projectEditManager() {
+            return {
+                activeTab: 'uploads',
+                showTranscriptModal: false,
+                transcriptLoading: false,
+                transcript: [],
+                transcriptSearch: '',
+
+                // Logs state
+                showLogsModal: false,
+                logs: [],
+                activeJobId: null,
+                processingStatus: null,
+                pollInterval: null,
+
+                get filteredTranscript() {
+                    if (!this.transcriptSearch) return this.transcript;
+                    const search = this.transcriptSearch.toLowerCase();
+                    return this.transcript.filter(item =>
+                        item.text.toLowerCase().includes(search)
+                    );
+                },
+
+                async viewTranscript(videoId) {
+                    this.showTranscriptModal = true;
+                    this.transcriptLoading = true;
+                    this.transcript = [];
+                    this.transcriptSearch = '';
+
+                    try {
+                        const response = await fetch(`/api/videos/${videoId}/transcript`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.transcript = data.transcript;
+                        } else {
+                            alert('Erro ao carregar transcrição');
+                            this.showTranscriptModal = false;
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro ao carregar transcrição');
+                        this.showTranscriptModal = false;
+                    } finally {
+                        this.transcriptLoading = false;
+                    }
+                },
+
+                async reprocessVideo(videoId) {
+                    if (!confirm('Tem certeza que deseja reprocessar este vídeo?\n\nOs clips anteriores serão substituídos.')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/projects/{{ project.id }}/reprocess/${videoId}`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.startLogPolling(data.video_id); // Backend returns video_id
+                        } else {
+                            const data = await response.json();
+                            alert('Erro ao reprocessar: ' + (data.detail || 'Erro desconhecido'));
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro ao reprocessar vídeo');
+                    }
+                },
+
+                startLogPolling(jobId) {
+                    this.activeJobId = jobId;
+                    this.showLogsModal = true;
+                    this.logs = ['Iniciando monitoramento...'];
+                    this.processingStatus = 'processing';
+
+                    // Limpar intervalo anterior se existir
+                    if (this.pollInterval) clearInterval(this.pollInterval);
+
+                    this.pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(`/api/jobs/${jobId}/logs`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                this.logs = data.logs;
+                                this.processingStatus = data.status;
+
+                                // Scroll to bottom
+                                const container = document.getElementById('logs-container');
+                                if (container) container.scrollTop = container.scrollHeight;
+
+                                if (data.status === 'pending_adjustment' || data.status === 'error' || data.status === 'complete') {
+                                    clearInterval(this.pollInterval);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Erro no polling:', error);
+                        }
+                    }, 1000);
+                },
+
+                closeLogsModal() {
+                    this.showLogsModal = false;
+                    if (this.pollInterval) clearInterval(this.pollInterval);
+                    // Recarregar página se o processo terminou para atualizar status
+                    if (this.processingStatus === 'pending_adjustment' || this.processingStatus === 'complete') {
+                        window.location.reload();
+                    }
+                }
+            }
+        }
+
+        // Auto-play videos on hover
+        document.addEventListener('DOMContentLoaded', function () {
+            const videoElements = document.querySelectorAll('video');
+            videoElements.forEach(video => {
+                video.addEventListener('mouseenter', function () {
+                    this.play();
+                });
+                video.addEventListener('mouseleave', function () {
+                    this.pause();
+                    this.currentTime = 0;
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

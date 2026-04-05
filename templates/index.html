@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,32 +12,39 @@
         .sidebar-transition {
             transition: all 0.3s ease-in-out;
         }
+
         .glass-effect {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
         .hover-lift {
             transition: transform 0.2s ease-in-out;
         }
+
         .hover-lift:hover {
             transform: translateY(-2px);
         }
     </style>
 </head>
+
 <body class="bg-gray-900 text-white font-sans">
     <!-- Sidebar -->
     <div x-data="{ sidebarOpen: true }" class="flex h-screen">
         <!-- Sidebar Mobile Overlay -->
-        <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black opacity-50 lg:hidden"></div>
+        <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black opacity-50 lg:hidden">
+        </div>
 
         <!-- Sidebar -->
-        <div x-show="sidebarOpen" class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 sidebar-transition transform lg:translate-x-0 lg:static lg:inset-0"
-             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-            
+        <div x-show="sidebarOpen"
+            class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 sidebar-transition transform lg:translate-x-0 lg:static lg:inset-0"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+
             <div class="flex items-center justify-center h-16 gradient-bg">
                 <div class="flex items-center">
                     <i class="fas fa-play-circle text-2xl text-white mr-2"></i>
@@ -45,19 +53,28 @@
             </div>
 
             <nav class="mt-8">
-                <a href="/" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-blue-500 bg-gray-700">
+                <a href="/"
+                    class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-blue-500 bg-gray-700">
                     <i class="fas fa-home mr-3"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="/outputs" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
+                <a href="/projects"
+                    class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
+                    <i class="fas fa-folder mr-3"></i>
+                    <span>Projetos</span>
+                </a>
+                <a href="/outputs"
+                    class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
                     <i class="fas fa-film mr-3"></i>
                     <span>Meus Vídeos</span>
                 </a>
-                <a href="#" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
+                <a href="#"
+                    class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
                     <i class="fas fa-chart-bar mr-3"></i>
                     <span>Analytics</span>
                 </a>
-                <a href="#" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
+                <a href="#"
+                    class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 border-l-4 border-transparent">
                     <i class="fas fa-cog mr-3"></i>
                     <span>Configurações</span>
                 </a>
@@ -86,7 +103,7 @@
                     </button>
                     <h2 class="ml-4 text-lg font-semibold">Dashboard</h2>
                 </div>
-                
+
                 <div class="flex items-center space-x-4">
                     <div class="relative">
                         <i class="fas fa-bell text-gray-400 hover:text-white cursor-pointer"></i>
@@ -113,7 +130,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="glass-effect rounded-lg p-6 hover-lift">
                         <div class="flex items-center">
                             <div class="p-3 bg-green-500 rounded-lg">
@@ -125,7 +142,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="glass-effect rounded-lg p-6 hover-lift">
                         <div class="flex items-center">
                             <div class="p-3 bg-purple-500 rounded-lg">
@@ -148,14 +165,43 @@
                         </div>
 
                         <form action="/upload/" method="post" enctype="multipart/form-data" class="space-y-6">
+                            <!-- Project Selection -->
+                            <div class="bg-gray-800 rounded-lg p-4">
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fas fa-folder mr-2 text-blue-400"></i>Projeto *
+                                </label>
+                                <div class="flex space-x-2">
+                                    <select name="project_id" required
+                                        class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                                        <option value="">Selecione um projeto</option>
+                                        {% for project in projects %}
+                                        <option value="{{ project.id }}">{{ project.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" @click="showCreateProjectModal = true"
+                                        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
+                                        title="Criar Novo Projeto">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-2">
+                                    <a href="/projects" class="text-blue-400 hover:text-blue-300">
+                                        <i class="fas fa-cog mr-1"></i>Gerenciar projetos
+                                    </a>
+                                </p>
+                            </div>
+
                             <!-- Upload Area -->
-                            <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 hover:border-blue-500 transition-colors">
+                            <div
+                                class="border-2 border-dashed border-gray-600 rounded-xl p-8 hover:border-blue-500 transition-colors">
                                 <label for="video-upload" class="cursor-pointer">
                                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
                                     <p class="text-lg font-semibold">Arraste ou clique para fazer upload</p>
-                                    <p class="text-sm text-gray-400 mt-2">Suporte para MP4, MOV, AVI e URLs do YouTube</p>
+                                    <p class="text-sm text-gray-400 mt-2">Suporte para MP4, MOV, AVI e URLs do YouTube
+                                    </p>
                                 </label>
-                                <input id="video-upload" name="video" type="file" class="hidden" @change="handleFileSelect" accept="video/*">
+                                <input id="video-upload" name="video" type="file" class="hidden"
+                                    @change="handleFileSelect" accept="video/*">
                             </div>
 
                             <!-- File Info -->
@@ -171,9 +217,11 @@
 
                             <!-- URL Input -->
                             <div class="relative">
-                                <input type="url" name="video_url" id="video_url" x-model="videoUrl" placeholder="Ou cole a URL do YouTube aqui..." 
-                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 pl-12 focus:outline-none focus:border-blue-500">
-                                <i class="fas fa-link absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <input type="url" name="video_url" id="video_url" x-model="videoUrl"
+                                    placeholder="Ou cole a URL do YouTube aqui..."
+                                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 pl-12 focus:outline-none focus:border-blue-500">
+                                <i
+                                    class="fas fa-link absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
 
                             <!-- Advanced Options -->
@@ -182,20 +230,22 @@
                                     <i class="fas fa-cogs mr-2 text-blue-400"></i>
                                     Configurações Avançadas
                                 </h4>
-                                
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Modelo de IA</label>
-                                        <select name="model" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
+                                        <select name="model"
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
                                             <option selected value="small">Small (Recomendado)</option>
                                             <option value="medium">Medium (Qualidade Superior)</option>
                                             <option value="large-v3">Large v3 (Melhor Qualidade)</option>
                                         </select>
                                     </div>
-                                    
+
                                     <div>
                                         <label class="block text-sm font-medium mb-2">Estilo das Legendas</label>
-                                        <select name="pycaps_template" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
+                                        <select name="pycaps_template"
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
                                             <option selected value="word-focus">Word Focus</option>
                                             <option value="vibrant">Vibrant</option>
                                             <option value="retro-gaming">Retro Gaming</option>
@@ -210,26 +260,69 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="compute_type" class="block text-sm font-medium text-slate-300">Compute Type</label>
-                                        <select id="compute_type" name="compute_type" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
+                                        <label for="compute_type"
+                                            class="block text-sm font-medium text-slate-300">Compute Type</label>
+                                        <select id="compute_type" name="compute_type"
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
                                             <option value="float32">float32 (Alta Precisão, Mais VRAM)</option>
                                             <option selected value="float16">float16 (Rapido, Menos VRAM)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="batch_size" class="block text-sm font-medium text-slate-300">Batch Size: <span x-text="batchSize" class="font-bold text-violet-400"></span></label>
-                                        <input id="batch_size" name="batch_size" type="range" min="1" max="5" x-model="batchSize" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2" appearance-none cursor-pointer">
+                                        <label for="batch_size" class="block text-sm font-medium text-slate-300">Batch
+                                            Size: <span x-text="batchSize"
+                                                class="font-bold text-violet-400"></span></label>
+                                        <input id="batch_size" name="batch_size" type="range" min="1" max="5"
+                                            x-model="batchSize"
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                                            appearance-none cursor-pointer">
                                     </div>
                                 </div>
                             </div>
 
-                            <button type="submit" 
-                                    class="w-full gradient-bg hover:opacity-90 text-white font-semibold py-4 rounded-lg transition-all duration-200 flex items-center justify-center"
-                                    :disabled="!isReadyToSubmit()">
+                            <button type="submit"
+                                class="w-full gradient-bg hover:opacity-90 text-white font-semibold py-4 rounded-lg transition-all duration-200 flex items-center justify-center"
+                                :disabled="!isReadyToSubmit()">
                                 <i class="fas fa-magic mr-2"></i>
                                 Gerar Clips Automáticos
                             </button>
                         </form>
+
+                        <!-- Create Project Modal -->
+                        <div x-show="showCreateProjectModal" x-cloak
+                            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                            @click.self="showCreateProjectModal = false">
+                            <div class="bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+                                <h3 class="text-2xl font-bold mb-4">Criar Novo Projeto</h3>
+
+                                <form @submit.prevent="createProject">
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium mb-2">Nome do Projeto *</label>
+                                        <input type="text" x-model="newProjectName" required
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+                                            placeholder="Ex: Podcast Episódio 1">
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="block text-sm font-medium mb-2">Descrição (opcional)</label>
+                                        <textarea x-model="newProjectDescription" rows="3"
+                                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+                                            placeholder="Descrição do projeto..."></textarea>
+                                    </div>
+
+                                    <div class="flex space-x-3">
+                                        <button type="button" @click="showCreateProjectModal = false"
+                                            class="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded-lg">
+                                            Cancelar
+                                        </button>
+                                        <button type="submit"
+                                            class="flex-1 gradient-bg hover:opacity-90 py-2 rounded-lg font-semibold">
+                                            Criar Projeto
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -237,51 +330,126 @@
                 <div class="glass-effect rounded-xl p-6">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold">Projetos Recentes</h3>
-                        <a href="/outputs" class="text-blue-400 hover:text-blue-300 text-sm">Ver todos</a>
+                        <a href="/projects" class="text-blue-400 hover:text-blue-300 text-sm">Ver todos</a>
                     </div>
-                    
+
+                    {% if projects and projects|length > 0 %}
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <!-- Project cards would go here -->
-                        <div class="bg-gray-700 rounded-lg p-4">
-                            <div class="aspect-video bg-gray-600 rounded mb-3 flex items-center justify-center">
-                                <i class="fas fa-play text-2xl text-gray-400"></i>
+                        {% for project in projects[:3] %}
+                        <div class="glass-effect rounded-xl p-4 hover-lift">
+                            <div class="flex justify-between items-start mb-3">
+                                <h4 class="text-lg font-bold truncate flex-1">{{ project.name }}</h4>
+                                <i class="fas fa-folder text-blue-400 ml-2"></i>
                             </div>
-                            <p class="font-medium truncate">Projeto de exemplo</p>
-                            <p class="text-sm text-gray-400">Há 2 horas</p>
+
+                            {% if project.description %}
+                            <p class="text-gray-400 mb-3 text-xs truncate">{{ project.description }}</p>
+                            {% endif %}
+
+                            <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+                                <div class="bg-gray-800 rounded p-2">
+                                    <i class="fas fa-video text-blue-400 text-xs"></i>
+                                    <span class="text-gray-400 ml-1">{{ project.video_count }} vídeos</span>
+                                </div>
+                                <div class="bg-gray-800 rounded p-2">
+                                    <i class="fas fa-film text-purple-400 text-xs"></i>
+                                    <span class="text-gray-400 ml-1">{{ project.clip_count }} clips</span>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-2">
+                                <a href="/?project_id={{ project.id }}"
+                                    class="flex-1 text-center bg-blue-600 hover:bg-blue-700 py-1.5 rounded text-xs">
+                                    <i class="fas fa-upload mr-1"></i>Upload
+                                </a>
+                                <a href="/outputs?project_id={{ project.id }}"
+                                    class="flex-1 text-center bg-gray-700 hover:bg-gray-600 py-1.5 rounded text-xs">
+                                    <i class="fas fa-eye mr-1"></i>Ver
+                                </a>
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-folder-open text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-gray-400 mb-4">Nenhum projeto criado ainda</p>
+                        <a href="/projects"
+                            class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg inline-flex items-center">
+                            <i class="fas fa-plus mr-2"></i>Criar Primeiro Projeto
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </main>
         </div>
     </div>
-<script>
-    function videoForm() {
-        return {
-            fileName: '', // Para o arquivo local
-            videoUrl: '', // Para a URL do YouTube
-            batchSize: 4,
+    <script>
+        function videoForm() {
+            return {
+                fileName: '', // Para o arquivo local
+                videoUrl: '', // Para a URL do YouTube
+                batchSize: 4,
+                showCreateProjectModal: false,
+                newProjectName: '',
+                newProjectDescription: '',
 
-            handleFileSelect(event) {
-                if (event.target.files.length > 0) {
-                    this.fileName = event.target.files[0].name;
-                    this.videoUrl = ''; // Limpa a URL quando um arquivo é selecionado
-                    document.getElementById('video-url-input').value = ''; // Limpa o input de URL
+                handleFileSelect(event) {
+                    if (event.target.files.length > 0) {
+                        this.fileName = event.target.files[0].name;
+                        this.videoUrl = ''; // Limpa a URL quando um arquivo é selecionado
+                        const urlInput = document.getElementById('video_url');
+                        if (urlInput) urlInput.value = ''; // Limpa o input de URL
+                    }
+                },
+                removeFile() {
+                    this.fileName = '';
+                    document.getElementById('video-upload').value = '';
+                },
+
+                // Lógica CORRIGIDA: Habilita se houver um arquivo OU uma URL válida
+                isReadyToSubmit() {
+                    const isFileSelected = this.fileName !== '';
+                    const isUrlFilled = this.videoUrl.trim() !== '';
+
+                    return isFileSelected || isUrlFilled;
+                },
+
+                async createProject() {
+                    if (!this.newProjectName.trim()) {
+                        alert('Nome do projeto é obrigatório');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('name', this.newProjectName.trim());
+                    if (this.newProjectDescription.trim()) {
+                        formData.append('description', this.newProjectDescription.trim());
+                    }
+
+                    try {
+                        const response = await fetch('/api/projects', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const project = await response.json();
+                            // Recarregar a página para atualizar a lista de projetos
+                            window.location.reload();
+                        } else {
+                            alert('Erro ao criar projeto');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro ao criar projeto');
+                    }
                 }
-            },
-            removeFile() {
-                this.fileName = '';
-                document.getElementById('video-upload').value = '';
-            },
-            
-            // Lógica CORRIGIDA: Habilita se houver um arquivo OU uma URL válida
-            isReadyToSubmit() {
-                const isFileSelected = this.fileName !== '';
-                const isUrlFilled = this.videoUrl.trim() !== '';
-
-                return isFileSelected || isUrlFilled;
             }
         }
-    }
-</script>
+    </script>
 </body>
+
 </html>
+```

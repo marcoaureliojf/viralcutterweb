@@ -2,8 +2,7 @@ fastapi
 uvicorn
 python-multipart
 jinja2
-dotenv
+python-dotenv
 yt-dlp
 ffmpeg-python
-git+https://github.com/matheusbach/whisperx.git
 mediapipe

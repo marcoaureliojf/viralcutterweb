@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,14 +13,27 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
         .hover-lift {
             transition: transform 0.2s ease-in-out;
         }
+
         .hover-lift:hover {
             transform: translateY(-2px);
         }
+
+        select {
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        select option {
+            background-color: #1f2937;
+            color: white;
+        }
     </style>
 </head>
+
 <body class="bg-gray-900 text-white font-sans">
     <div class="min-h-screen">
         <!-- Header -->
@@ -55,11 +69,27 @@
                     <h2 class="text-3xl font-bold">Meus Vídeos Processados</h2>
                     <p class="text-gray-400 mt-2">Gerencie e visualize todos os seus clips criados</p>
                 </div>
-                <div class="flex space-x-4">
+                <div class="flex space-x-4 items-center">
+                    <!-- Project Filter -->
+                    <div class="glass-effect px-4 py-2 rounded-lg">
+                        <label for="project-filter" class="text-gray-400 text-sm mr-2">Projeto:</label>
+                        <select id="project-filter"
+                            class="bg-transparent text-white border-none outline-none cursor-pointer">
+                            <option value="">Todos os Projetos</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if selected_project_id==project.id %}selected{% endif
+                                %}>
+                                {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <a href="/download-all" class="glass-effect hover-lift px-6 py-3 rounded-lg flex items-center">
                         <i class="fas fa-download mr-2"></i>Baixar Todos
                     </a>
-                    <a href="/" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center">
+                    <a href="/"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center">
                         <i class="fas fa-plus mr-2"></i>Novo Vídeo
                     </a>
                 </div>
@@ -72,33 +102,43 @@
                 <div class="glass-effect rounded-xl overflow-hidden hover-lift">
                     <div class="relative">
                         <video class="w-full aspect-video bg-gray-800" preload="metadata">
-                            <source src="/outputs/{{ video }}" type="video/mp4">
+                            <source src="/media/projects/{{ video.project_id }}/outputs/{{ video.filename }}"
+                                type="video/mp4">
                         </video>
-                        <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
-                            <button class="bg-white bg-opacity-20 rounded-full p-3 mx-1" onclick="this.closest('div').querySelector('video').play()">
+                        <div
+                            class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
+                            <button class="bg-white bg-opacity-20 rounded-full p-3 mx-1"
+                                onclick="this.closest('.relative').querySelector('video').play()">
                                 <i class="fas fa-play text-white"></i>
                             </button>
-                            <a href="/download/{{ video }}" class="bg-white bg-opacity-20 rounded-full p-3 mx-1">
+                            <a href="/download/{{ video.filename }}"
+                                class="bg-white bg-opacity-20 rounded-full p-3 mx-1">
                                 <i class="fas fa-download text-white"></i>
                             </a>
                         </div>
                     </div>
-                    
+
                     <div class="p-4">
                         <div class="flex justify-between items-start mb-3">
-                            <h3 class="font-semibold truncate flex-1 mr-2" title="{{ video }}">{{ video }}</h3>
+                            <div class="flex-1 mr-2">
+                                <h3 class="font-semibold truncate" title="{{ video.title }}">{{ video.title }}</h3>
+                                <p class="text-xs text-gray-500 truncate" title="{{ video.filename }}">{{ video.filename
+                                    }}</p>
+                            </div>
                             <div class="flex space-x-2">
-                                <a href="/download/{{ video }}" class="text-blue-400 hover:text-blue-300" title="Baixar">
+                                <a href="/download/{{ video.filename }}" class="text-blue-400 hover:text-blue-300"
+                                    title="Baixar">
                                     <i class="fas fa-download"></i>
                                 </a>
-                                <form action="/delete/{{ video }}" method="post" onsubmit="return confirm('Tem certeza?')" class="inline">
+                                <form action="/delete/{{ video.filename }}" method="post"
+                                    onsubmit="return confirm('Tem certeza?')" class="inline">
                                     <button type="submit" class="text-red-400 hover:text-red-300" title="Deletar">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </div>
                         </div>
-                        
+
                         <div class="flex justify-between text-sm text-gray-400">
                             <span>MP4 • 1080p</span>
                             <span>{% if loop.index %}{{ loop.index }}min{% endif %}</span>
@@ -113,7 +153,8 @@
                 <i class="fas fa-film text-6xl text-gray-600 mb-4"></i>
                 <h3 class="text-2xl font-semibold mb-2">Nenhum vídeo processado</h3>
                 <p class="text-gray-400 mb-6">Comece criando seu primeiro projeto de clip viral</p>
-                <a href="/" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold inline-flex items-center">
+                <a href="/"
+                    class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold inline-flex items-center">
                     <i class="fas fa-plus mr-2"></i>Criar Primeiro Clip
                 </a>
             </div>
@@ -122,14 +163,24 @@
     </div>
 
     <script>
+        // Project filter handler
+        document.getElementById('project-filter').addEventListener('change', function () {
+            const projectId = this.value;
+            if (projectId) {
+                window.location.href = '/outputs?project_id=' + projectId;
+            } else {
+                window.location.href = '/outputs';
+            }
+        });
+
         // Auto-play videos on hover
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const videoElements = document.querySelectorAll('video');
             videoElements.forEach(video => {
-                video.addEventListener('mouseenter', function() {
+                video.addEventListener('mouseenter', function () {
                     this.play();
                 });
-                video.addEventListener('mouseleave', function() {
+                video.addEventListener('mouseleave', function () {
                     this.pause();
                     this.currentTime = 0;
                 });
@@ -137,4 +188,5 @@
         });
     </script>
 </body>
+
 </html>

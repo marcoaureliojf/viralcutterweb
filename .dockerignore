@@ -10,6 +10,7 @@ docker-compose.yml
 .gitignore
 .dockerignore
 README.md
+docs/
 
 # 2. Pastas de Mídia Geradas e Temporárias
 # Essencial para a velocidade do build. Nunca envie uploads ou outputs para o contexto.
@@ -23,7 +24,29 @@ burned_sub/
 final/
 node_modules/
 
-# 3. Ambientes Virtuais do Python
+# 3. Sistema de Projetos
+# Diretório de projetos contém uploads, outputs e arquivos temporários
+# Ignora o conteúdo mas mantém a estrutura
+projects/*/uploads/
+projects/*/outputs/
+projects/*/tmp/
+projects/*/burned_sub/
+projects/*/subs_ass/
+
+# 4. Banco de Dados
+# Arquivos de banco de dados não devem ser incluídos na imagem
+# O banco será criado/montado via volume
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# 5. Antigravity Brain (Artifacts do Assistente)
+# Diretório usado pelo assistente de IA
+.gemini/
+
+# 6. Ambientes Virtuais do Python
 # CRÍTICO: A imagem Docker deve construir seu próprio ambiente a partir do requirements.txt.
 # Enviar seu venv local vai quebrar o build e torná-lo extremamente lento.
 venv/
@@ -31,30 +54,36 @@ venv/
 env/
 ENV/
 
-# 4. Arquivos de Ambiente e Segredos
+# 7. Arquivos de Ambiente e Segredos
 # NUNCA inclua arquivos .env na sua imagem Docker por segurança.
 *.env
 .env*
 
-# 5. Bytecode e Cache do Python
+# 8. Bytecode e Cache do Python
 # A imagem gerará seu próprio bytecode quando o código for executado.
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# 6. Configuração de IDE / Editor de Código
+# 9. Configuração de IDE / Editor de Código
 # Configurações locais não são necessárias na imagem.
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# 7. Arquivos de Log
+# 10. Arquivos de Log
 *.log
 logs/
 
-# 8. Arquivos específicos do Sistema Operacional
+# 11. Arquivos específicos do Sistema Operacional
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 12. Arquivos de Teste
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage.*

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projetos - ViralCutter Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hover-lift {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="glass-effect border-b border-gray-700">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <i class="fas fa-play-circle text-2xl text-blue-400 mr-3"></i>
+                        <h1 class="text-2xl font-bold">ViralCutter Studio</h1>
+                    </div>
+                    <nav class="flex space-x-6">
+                        <a href="/" class="text-gray-400 hover:text-white">Dashboard</a>
+                        <a href="/projects" class="text-white border-b-2 border-blue-500">Projetos</a>
+                        <a href="/outputs" class="text-gray-400 hover:text-white">Meus Vídeos</a>
+                    </nav>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">U</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8" x-data="projectsManager()">
+            <!-- Page Header -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold">Meus Projetos</h2>
+                    <p class="text-gray-400 mt-2">Organize seus vídeos por projeto</p>
+                </div>
+                <button @click="showCreateModal = true"
+                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Novo Projeto
+                </button>
+            </div>
+
+            <!-- Projects Grid -->
+            {% if projects and projects|length > 0 %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for project in projects %}
+                <div class="glass-effect rounded-xl p-6 hover-lift">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-bold">{{ project.name }}</h3>
+                        <button @click="deleteProject('{{ project.id }}', '{{ project.name }}')"
+                            class="text-red-400 hover:text-red-300" title="Deletar Projeto">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+
+                    {% if project.description %}
+                    <p class="text-gray-400 mb-4 text-sm">{{ project.description }}</p>
+                    {% endif %}
+
+                    <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+                        <div class="bg-gray-800 rounded-lg p-3">
+                            <i class="fas fa-video text-blue-400 mb-1"></i>
+                            <p class="text-gray-400">Vídeos</p>
+                            <p class="text-xl font-bold">{{ project.stats.total_videos if project.stats else 0 }}</p>
+                        </div>
+                        <div class="bg-gray-800 rounded-lg p-3">
+                            <i class="fas fa-film text-purple-400 mb-1"></i>
+                            <p class="text-gray-400">Clips</p>
+                            <p class="text-xl font-bold">{{ project.stats.total_clips if project.stats else 0 }}</p>
+                        </div>
+                    </div>
+
+
+                    <div class="flex space-x-2">
+                        <a href="/projects/{{ project.id }}/edit"
+                            class="flex-1 text-center bg-purple-600 hover:bg-purple-700 py-2 rounded-lg">
+                            <i class="fas fa-edit mr-1"></i>Editar
+                        </a>
+                        <a href="/?project_id={{ project.id }}"
+                            class="flex-1 text-center bg-blue-600 hover:bg-blue-700 py-2 rounded-lg">
+                            <i class="fas fa-upload mr-1"></i>Upload
+                        </a>
+                        <a href="/outputs?project_id={{ project.id }}"
+                            class="flex-1 text-center bg-gray-700 hover:bg-gray-600 py-2 rounded-lg">
+                            <i class="fas fa-eye mr-1"></i>Ver Clips
+                        </a>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-3">
+                        Criado em {{ project.created_at[:10] if project.created_at else 'N/A' }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="glass-effect rounded-xl p-12 text-center">
+                <i class="fas fa-folder-open text-6xl text-gray-600 mb-4"></i>
+                <h3 class="text-2xl font-semibold mb-2">Nenhum projeto criado</h3>
+                <p class="text-gray-400 mb-6">Crie seu primeiro projeto para começar a organizar seus vídeos</p>
+                <button @click="showCreateModal = true"
+                    class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Criar Primeiro Projeto
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Create Project Modal -->
+            <div x-show="showCreateModal" x-cloak
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                @click.self="showCreateModal = false">
+                <div class="bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4">
+                    <h3 class="text-2xl font-bold mb-4">Criar Novo Projeto</h3>
+
+                    <form action="/api/projects" method="post" @submit="handleCreateProject">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Nome do Projeto *</label>
+                            <input type="text" name="name" required
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+                                placeholder="Ex: Podcast Episódio 1">
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2">Descrição (opcional)</label>
+                            <textarea name="description" rows="3"
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+                                placeholder="Descrição do projeto..."></textarea>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button type="button" @click="showCreateModal = false"
+                                class="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded-lg">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="flex-1 gradient-bg hover:opacity-90 py-2 rounded-lg font-semibold">
+                                Criar Projeto
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function projectsManager() {
+            return {
+                showCreateModal: false,
+
+                async handleCreateProject(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const formData = new FormData(form);
+
+                    try {
+                        const response = await fetch('/api/projects', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Erro ao criar projeto');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro ao criar projeto');
+                    }
+                },
+
+                async deleteProject(projectId, projectName) {
+                    if (!confirm(`Tem certeza que deseja deletar o projeto "${projectName}"?\n\nTodos os vídeos e clips serão permanentemente removidos.`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/projects/${projectId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Erro ao deletar projeto');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro ao deletar projeto');
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
